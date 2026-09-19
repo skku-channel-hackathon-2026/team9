@@ -69,12 +69,13 @@
  * The height is measured from the panel: a fixed pixel cap left dead space in
  * a tall panel and clipped a short one.
  */
+/*
+ * The list no longer scrolls on its own — the page does. A scroll region
+ * inside a scroll region meant the student could reach the rows but never get
+ * back up to the search field above them.
+ */
 .skku-list {
-  max-height: calc(100vh - 300px);
-  min-height: 140px;
-  padding-bottom: 56px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding-bottom: 72px;
 }
 
 /* Figures line up in a column only when the digits are one width. */
@@ -279,4 +280,45 @@
 /* The counter card's label column. One width, so the values form an edge. */
 .skku-cell {
   width: 56px;
+}
+
+/* The composer: one field, with the control inside it. */
+.skku-composer {
+  position: relative;
+}
+
+.skku-send {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+  padding: 0;
+
+  cursor: pointer;
+
+  background-color: var(--skku-green);
+  border: none;
+  border-radius: 999px;
+
+  transition: background-color 140ms ease-out;
+}
+
+.skku-send:hover:not(:disabled) {
+  background-color: var(--skku-green-hover);
+}
+
+.skku-send:disabled {
+  cursor: default;
+  background-color: var(--color-border-neutral);
+}
+
+.skku-composer input:focus {
+  border-color: var(--skku-green);
 }

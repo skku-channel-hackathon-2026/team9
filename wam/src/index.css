@@ -10,7 +10,14 @@ body {
   width: 100%;
   height: 100%;
 
-  overflow: hidden;
+  /*
+   * The panel scrolls as one page. It used to be `hidden` here with an inner
+   * scroll on the list alone, which meant anything above the list could not
+   * be reached once the content grew past the frame: a long answer pushed the
+   * question off the top with no way back to it.
+   */
+  overflow-x: hidden;
+  overflow-y: auto;
 
   -webkit-tap-highlight-color: transparent;
 }

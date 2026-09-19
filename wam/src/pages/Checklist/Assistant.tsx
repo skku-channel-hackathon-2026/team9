@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  suggestedQuestions,
   type AssistantAnswer,
   type Language,
   type RequirementState,
@@ -10,9 +9,11 @@ import {
   Button,
   Divider,
   HStack,
+  Icon,
   Text,
   VStack,
 } from '@channel.io/bezier-react/beta'
+import { SendIcon } from '@channel.io/bezier-icons'
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import './brand.css'
@@ -20,12 +21,13 @@ import { t } from './strings'
 
 const INPUT_STYLE = {
   width: '100%',
-  padding: '9px 10px',
-  borderRadius: 8,
+  padding: '11px 44px 11px 14px',
+  borderRadius: 999,
   border: '1px solid var(--color-border-neutral)',
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
+  outline: 'none',
 }
 
 interface Entry {
@@ -144,21 +146,6 @@ function Assistant({
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
   const threadRef = useRef<HTMLDivElement>(null)
-
-  const opening = useMemo(
-    () => suggestedQuestions(language, item),
-    [item, language]
-  )
-
-  // Once an answer has come back, its own follow-ups are better than the
-  // opening set: they are about what was just said.
-  const last = entries[entries.length - 1]
-  const suggestions =
-    last?.role === 'assistant' && last.followUps?.length
-      ? last.followUps
-      : entries.length === 0
-        ? opening
-        : []
 
   const send = useCallback(
     async (text: string) => {
@@ -324,52 +311,35 @@ function Assistant({
       <Divider withoutSideIndent />
 
       <VStack spacing={8}>
-        {!pending && suggestions.length > 0 && (
-          <VStack spacing={4}>
-            {suggestions.slice(0, 3).map((suggestion) => (
-              <Button
-                key={suggestion}
-                variant="outlined"
-                semantic="secondary"
-                size="xs"
-                label={suggestion}
-                onClick={() => void send(suggestion)}
-              />
-            ))}
-          </VStack>
-        )}
-
         <form
           onSubmit={(event) => {
             event.preventDefault()
             void send(question)
           }}
         >
-          <HStack
-            align="center"
-            spacing={6}
-          >
-            <Box grow={1}>
-              <input
-                value={question}
-                placeholder={t('assistantPlaceholder', language)}
-                onChange={(event) => setQuestion(event.target.value)}
-                aria-label={t('assistantTitle', language)}
-                style={INPUT_STYLE}
+          {/* One field with the control inside it, the way every chat
+              composer works, rather than a box and a button beside it. */}
+          <Box className="skku-composer">
+            <input
+              value={question}
+              placeholder={t('assistantPlaceholder', language)}
+              onChange={(event) => setQuestion(event.target.value)}
+              aria-label={t('assistantTitle', language)}
+              style={INPUT_STYLE}
+            />
+            <button
+              type="submit"
+              className="skku-send"
+              aria-label={t('send', language)}
+              disabled={pending || question.trim().length === 0}
+            >
+              <Icon
+                source={SendIcon}
+                size="16"
+                color="icon-inverse-heavier"
               />
-            </Box>
-            <Box shrink={0}>
-              <Button
-                type="submit"
-                variant="filled"
-                semantic="primary"
-                size="s"
-                label={t('send', language)}
-                loading={pending}
-                disabled={question.trim().length === 0}
-              />
-            </Box>
-          </HStack>
+            </button>
+          </Box>
         </form>
 
         <Button
