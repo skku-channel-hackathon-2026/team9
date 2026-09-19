@@ -1084,6 +1084,11 @@ export const ChecklistWamArgsSchema = z.object({
   living: z.enum(["dorm", "commuter"]),
   university: z.string(),
   semester: z.enum(["first", "second", "later"]),
+  /**
+   * An answer to a question asked through this same call, because the
+   * question function is not in the registration AppStore currently holds.
+   */
+  assistantAnswer: z.unknown().optional(),
   /** The reader's name, when Channel gives us one. */
   name: z.string().optional(),
   /** Short-lived signed permission to post into the chat it was opened from. */
