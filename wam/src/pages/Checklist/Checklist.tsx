@@ -36,6 +36,7 @@ import {
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
+import './brand.css'
 import { daysLabel, t } from './strings'
 
 const LEAD_COUNT = 3
@@ -541,7 +542,10 @@ function Checklist() {
 
   if (asking) {
     return (
-      <VStack spacing={14}>
+      <VStack
+        className="skku"
+        spacing={14}
+      >
         <VStack spacing={4}>
           <Text
             typo="11"
@@ -772,7 +776,10 @@ function Checklist() {
   } as Record<string, number>
 
   return (
-    <VStack spacing={12}>
+    <VStack
+      className="skku"
+      spacing={12}
+    >
       <VStack spacing={6}>
         {data.name && (
           <Text

@@ -1,0 +1,25 @@
+/*
+ * Sungkyunkwan's colours, applied by re-pointing the design tokens the
+ * components already resolve rather than by selecting on class names, which
+ * are hashed and change between builds.
+ *
+ * Only the two places a brand colour belongs are changed: the primary action,
+ * and the state that means something is finished. Text and icon accents are
+ * deliberately left alone — both brand colours are dark, and on the dark theme
+ * they would fail against the background they sit on.
+ */
+
+.skku {
+  --skku-green: #0c6d41;
+  --skku-green-hover: #0a5c37;
+  --skku-blue: #003daf;
+  --skku-blue-hover: #003496;
+
+  /* the filled primary button */
+  --color-fill-neutral-heaviest: var(--skku-blue);
+  --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
+
+  /* anything that reads as finished */
+  --color-fill-accent-green-heavier: var(--skku-green);
+  --color-fill-accent-green-heavier-hovered: var(--skku-green-hover);
+}
