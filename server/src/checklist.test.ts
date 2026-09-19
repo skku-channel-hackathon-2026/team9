@@ -126,7 +126,7 @@ test("a domestic student is not shown immigration requirements", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false, living: "dorm" },
+    profile: { isInternational: false, living: "dorm", university: "skku" },
   });
   assert.ok(items.length > 0);
   assert.ok(
@@ -139,12 +139,12 @@ test("an international student sees strictly more than a domestic one", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: true, living: "dorm" },
+    profile: { isInternational: true, living: "dorm", university: "skku" },
   });
   const domestic = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false, living: "dorm" },
+    profile: { isInternational: false, living: "dorm", university: "skku" },
   });
   assert.ok(international.length > domestic.length);
   const domesticIds = new Set(domestic.map((item) => item.id));
@@ -161,7 +161,7 @@ test("omitting a profile keeps every requirement", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: true, living: "dorm" },
+    profile: { isInternational: true, living: "dorm", university: "skku" },
   });
   assert.equal(all.length, international.length);
 });
@@ -233,7 +233,7 @@ test("a domestic student reads the checklist in Korean", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "dorm" },
+    profile: { isInternational: false, living: "dorm", university: "skku" },
   });
   const withdrawal = items.find((item) => item.id === "course-withdrawal");
   assert.ok(withdrawal);
@@ -252,7 +252,7 @@ test("an international student reads the same requirement in English", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm" },
+    profile: { isInternational: true, living: "dorm", university: "skku" },
   });
   const withdrawal = items.find((item) => item.id === "course-withdrawal");
   assert.ok(withdrawal);
@@ -266,7 +266,11 @@ test("the Korean name is kept in both languages, to show at an office", () => {
     const items = buildChecklist({
       ...BASE,
       today: "2026-09-19",
-      profile: { isInternational: language, living: "dorm" },
+      profile: {
+        isInternational: language,
+        living: "dorm",
+        university: "skku",
+      },
     });
     for (const item of items) {
       assert.ok(
@@ -282,7 +286,7 @@ test("every requirement explains why it applies, in both languages", () => {
     const items = buildChecklist({
       ...BASE,
       today: "2026-09-19",
-      profile: { isInternational, living: "dorm" },
+      profile: { isInternational, living: "dorm", university: "skku" },
     });
     for (const item of items) {
       assert.ok(item.why.length > 10, `${item.id} has no explanation`);
@@ -294,7 +298,7 @@ test("a question carries the Korean term, the date and the source", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm" },
+    profile: { isInternational: true, living: "dorm", university: "skku" },
   });
   const overdue = items.find((item) => item.status === "overdue");
   assert.ok(overdue);
@@ -309,7 +313,7 @@ test("a question about something still ahead asks how to prepare", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm" },
+    profile: { isInternational: true, living: "dorm", university: "skku" },
   });
   const ahead = items.find((item) => item.daysLeft > 0);
   assert.ok(ahead);
@@ -322,11 +326,46 @@ test("a Korean student's question is written in Korean", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "dorm" },
+    profile: { isInternational: false, living: "dorm", university: "skku" },
   });
   const first = items[0];
   assert.ok(first);
   const question = composeQuestion(first, "ko", "2026-09-19");
   assert.ok(/[가-힣]/.test(question));
   assert.ok(question.includes(first.officialKo));
+});
+
+test("a university whose calendar is not loaded still gets the national rules", () => {
+  const skku = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm", university: "skku" },
+  });
+  const elsewhere = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm", university: "yonsei" },
+  });
+
+  assert.ok(
+    elsewhere.length > 0,
+    "another university was shown nothing at all",
+  );
+  assert.ok(
+    elsewhere.every((item) => item.national),
+    "a university's own deadlines leaked to a different university",
+  );
+  assert.ok(skku.length > elsewhere.length);
+
+  const arc = elsewhere.find((item) => item.id === "arc-registration");
+  assert.ok(arc, "immigration rules should hold at every university");
+});
+
+test("an unknown university id falls back rather than breaking", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm", university: "nonsense" },
+  });
+  assert.ok(items.length > 0);
 });

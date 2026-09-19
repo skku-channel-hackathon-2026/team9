@@ -13,6 +13,51 @@ export type RequirementAnchor = "arrival" | "fixed";
 /** Who a requirement actually applies to, so nobody reads irrelevant rows. */
 export type RequirementAudience = "all" | "international" | "domestic";
 
+/**
+ * Universities this build knows about. Immigration rules are national and
+ * apply at all of them; only SKKU's own calendar is loaded, and the interface
+ * says so rather than showing another school's student an empty list and
+ * letting them assume there is nothing to do.
+ */
+export interface University {
+  id: string;
+  name: Localized;
+  /** True when this build carries that university's own deadlines. */
+  hasSchoolDates: boolean;
+}
+
+export const UNIVERSITIES: University[] = [
+  {
+    id: "skku",
+    name: { en: "Sungkyunkwan University", ko: "성균관대학교" },
+    hasSchoolDates: true,
+  },
+  {
+    id: "yonsei",
+    name: { en: "Yonsei University", ko: "연세대학교" },
+    hasSchoolDates: false,
+  },
+  {
+    id: "korea",
+    name: { en: "Korea University", ko: "고려대학교" },
+    hasSchoolDates: false,
+  },
+  {
+    id: "hanyang",
+    name: { en: "Hanyang University", ko: "한양대학교" },
+    hasSchoolDates: false,
+  },
+  {
+    id: "other",
+    name: { en: "Another university", ko: "기타 대학" },
+    hasSchoolDates: false,
+  },
+];
+
+export function universityById(id: string): University {
+  return UNIVERSITIES.find((u) => u.id === id) ?? UNIVERSITIES[0]!;
+}
+
 /** Where the student lives, when that changes whether a rule applies. */
 export type RequirementLiving = "any" | "dorm" | "commuter";
 
@@ -637,11 +682,14 @@ export interface StudentProfile {
   isInternational: boolean;
   /** Some requirements only exist for one living situation. */
   living: "dorm" | "commuter";
+  /** Which university's own calendar to apply, if this build has it. */
+  university: string;
 }
 
 export const StudentProfileSchema = z.object({
   isInternational: z.boolean(),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
+  university: z.string().default("skku"),
 });
 
 /**
@@ -656,6 +704,14 @@ export function appliesTo(
   requirement: Requirement,
   profile: StudentProfile,
 ): boolean {
+  // A university's own deadlines are only correct for that university.
+  // National rules hold everywhere, so they are always shown.
+  if (
+    !requirement.national &&
+    !universityById(profile.university).hasSchoolDates
+  ) {
+    return false;
+  }
   if (requirement.living !== "any" && requirement.living !== profile.living) {
     return false;
   }
@@ -754,6 +810,7 @@ export const StoredProgressSchema = z.object({
   completed: z.array(z.string()),
   isInternational: z.boolean().default(true),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
+  university: z.string().default("skku"),
 });
 
 export type StoredProgress = z.infer<typeof StoredProgressSchema>;
@@ -786,6 +843,9 @@ export const ChecklistWamArgsSchema = z.object({
   isNew: z.boolean(),
   isInternational: z.boolean(),
   living: z.enum(["dorm", "commuter"]),
+  university: z.string(),
+  /** The reader's name, when Channel gives us one. */
+  name: z.string().optional(),
   /** Short-lived signed permission to post into the chat it was opened from. */
   targetToken: z.string().optional(),
   /** False when D1 is unavailable, so the UI can explain why ticks won't stick. */
@@ -804,6 +864,7 @@ export const ProgressUpdateSchema = z.object({
   arrivalDate: z.string().optional(),
   isInternational: z.boolean().optional(),
   living: z.enum(["dorm", "commuter"]).optional(),
+  university: z.string().max(32).optional(),
 });
 
 export type ProgressUpdate = z.infer<typeof ProgressUpdateSchema>;
@@ -814,7 +875,8 @@ export function hasProgressUpdate(update: ProgressUpdate): boolean {
     update.completed !== undefined ||
     update.arrivalDate !== undefined ||
     update.isInternational !== undefined ||
-    update.living !== undefined
+    update.living !== undefined ||
+    update.university !== undefined
   );
 }
 
@@ -834,6 +896,7 @@ export function applyProgressUpdate(
       : current.completed,
     isInternational: update.isInternational ?? current.isInternational,
     living: update.living ?? current.living,
+    university: update.university ?? current.university,
   };
 }
 
@@ -874,6 +937,7 @@ export function defaultProgress(today: string): StoredProgress {
     completed: [],
     isInternational: true,
     living: "dorm",
+    university: "skku",
   };
 }
 

@@ -3,6 +3,9 @@ import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
   languageFor,
+  pick,
+  UNIVERSITIES,
+  universityById,
   SCHOOL,
   TUTORIAL_FUNCTIONS,
   type Language,
@@ -34,6 +37,29 @@ import { useChecklistWamData } from '../../hooks/useChecklistWamData'
 import { daysLabel, t } from './strings'
 
 const LEAD_COUNT = 3
+
+const CATEGORY = [
+  { id: 'all', key: 'all' },
+  { id: 'immigration', key: 'catImmigration' },
+  { id: 'academic', key: 'catAcademic' },
+  { id: 'life', key: 'catLife' },
+] as const
+
+const SCOPE_LABEL = {
+  immigration: 'catImmigration',
+  academic: 'catAcademic',
+  life: 'catLife',
+} as const
+
+const SELECT_STYLE = {
+  width: '100%',
+  padding: '9px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--bezier-color-border-neutral)',
+  background: 'transparent',
+  color: 'inherit',
+  font: 'inherit',
+}
 
 const TAG = {
   overdue: { variant: 'red', key: 'overdueTag' },
@@ -108,6 +134,14 @@ function Row({
                 variant={tag.variant}
               >
                 {t(tag.key, language)}
+              </Badge>
+            </Box>
+            <Box shrink={0}>
+              <Badge
+                size="xs"
+                variant="neutral-light"
+              >
+                {t(SCOPE_LABEL[item.scope], language)}
               </Badge>
             </Box>
             {item.national && (
@@ -308,6 +342,8 @@ function Checklist() {
   const [arrivalDate, setArrivalDate] = useState('')
   const [isInternational, setIsInternational] = useState(true)
   const [living, setLiving] = useState<'dorm' | 'commuter'>('dorm')
+  const [university, setUniversity] = useState('skku')
+  const [category, setCategory] = useState<string>('all')
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -334,6 +370,7 @@ function Checklist() {
       setArrivalDate(data.arrivalDate)
       setIsInternational(data.isInternational)
       setLiving(data.living)
+      setUniversity(data.university)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
@@ -342,7 +379,9 @@ function Checklist() {
     }
   }, [data, hydrated])
 
-  const language: Language = languageFor({ isInternational, living })
+  const profile = { isInternational, living, university }
+  const language: Language = languageFor(profile)
+  const school = universityById(university)
 
   const items = useMemo(
     () =>
@@ -352,10 +391,10 @@ function Checklist() {
             semesterStart: data.semesterStart,
             completed,
             today: data.today,
-            profile: { isInternational, living },
+            profile: { isInternational, living, university },
           })
         : [],
-    [arrivalDate, completed, data, isInternational, living]
+    [arrivalDate, completed, data, isInternational, living, university]
   )
 
   const persist = useCallback(
@@ -405,14 +444,26 @@ function Checklist() {
 
   const confirm = useCallback(() => {
     setAsking(false)
-    void persist({ completed, arrivalDate, isInternational, living })
-  }, [arrivalDate, completed, isInternational, living, persist])
+    void persist({
+      completed,
+      arrivalDate,
+      isInternational,
+      living,
+      university,
+    })
+  }, [arrivalDate, completed, isInternational, living, persist, university])
 
   const startOver = useCallback(() => {
     setCompleted([])
     setAsking(false)
-    void persist({ completed: [], arrivalDate, isInternational, living })
-  }, [arrivalDate, isInternational, living, persist])
+    void persist({
+      completed: [],
+      arrivalDate,
+      isInternational,
+      living,
+      university,
+    })
+  }, [arrivalDate, isInternational, living, persist, university])
 
   const share = useCallback(async () => {
     if (!data?.targetToken) {
@@ -464,6 +515,38 @@ function Checklist() {
           >
             {t('setupLead', language)}
           </Text>
+        </VStack>
+
+        <VStack spacing={4}>
+          <Text
+            typo="13"
+            bold
+            color="text-neutral"
+          >
+            {t('university', language)}
+          </Text>
+          <select
+            value={university}
+            onChange={(event) => setUniversity(event.target.value)}
+            style={SELECT_STYLE}
+          >
+            {UNIVERSITIES.map((option) => (
+              <option
+                key={option.id}
+                value={option.id}
+              >
+                {pick(option.name, language)}
+              </option>
+            ))}
+          </select>
+          {!school.hasSchoolDates && (
+            <Text
+              typo="12"
+              color="text-neutral-lighter"
+            >
+              {t('noSchoolDates', language)}
+            </Text>
+          )}
         </VStack>
 
         <VStack spacing={4}>
@@ -549,25 +632,74 @@ function Checklist() {
           label={t('clear', language)}
           onClick={startOver}
         />
+        <HStack
+          align="center"
+          spacing={6}
+        >
+          <Text
+            typo="11"
+            color="text-neutral-lighter"
+          >
+            {t('demo', language)}
+          </Text>
+          <Button
+            variant="ghost"
+            semantic="secondary"
+            size="xs"
+            label={t('demoIntl', language)}
+            onClick={() => {
+              setIsInternational(true)
+              setLiving('dorm')
+              setUniversity('skku')
+            }}
+          />
+          <Button
+            variant="ghost"
+            semantic="secondary"
+            size="xs"
+            label={t('demoDomestic', language)}
+            onClick={() => {
+              setIsInternational(false)
+              setLiving('commuter')
+              setUniversity('skku')
+            }}
+          />
+        </HStack>
       </VStack>
     )
   }
 
-  const outstanding = items.filter((item) => item.status !== 'done')
-  const lead = outstanding.slice(0, LEAD_COUNT)
-  const rest = expanded ? items.filter((item) => !lead.includes(item)) : []
-  const doneCount = items.length - outstanding.length
+  const visible =
+    category === 'all' ? items : items.filter((item) => item.scope === category)
+  const outstanding = visible.filter((item) => item.status !== 'done')
+  const lead = expanded ? visible : outstanding.slice(0, LEAD_COUNT)
+  const rest: RequirementState[] = []
+  const doneCount = items.filter((item) => item.status === 'done').length
+  const counts = {
+    all: items.length,
+    immigration: items.filter((i) => i.scope === 'immigration').length,
+    academic: items.filter((i) => i.scope === 'academic').length,
+    life: items.filter((i) => i.scope === 'life').length,
+  } as Record<string, number>
 
   return (
     <VStack spacing={12}>
       <VStack spacing={6}>
+        {data.name && (
+          <Text
+            typo="13"
+            color="text-neutral-lighter"
+          >
+            {`${t('greeting', language)}, ${data.name} · ${pick(school.name, language)}`}
+          </Text>
+        )}
         <Text
           typo="18"
           bold
           color="text-neutral"
         >
-          {lead.length > 0
-            ? `${lead.length} ${t('headline', language)}`
+          {outstanding.length > 0
+            ? `${Math.min(outstanding.length, LEAD_COUNT)} ${t('headline', language)}`
             : t('headlineNone', language)}
         </Text>
         <Text
@@ -603,6 +735,24 @@ function Checklist() {
         </HStack>
       </VStack>
 
+      <HStack
+        align="center"
+        spacing={4}
+      >
+        {CATEGORY.filter(
+          (option) => option.id === 'all' || counts[option.id] > 0
+        ).map((option) => (
+          <Button
+            key={option.id}
+            variant={category === option.id ? 'filled' : 'outlined'}
+            semantic="secondary"
+            size="xs"
+            label={`${t(option.key, language)} ${counts[option.id]}`}
+            onClick={() => setCategory(option.id)}
+          />
+        ))}
+      </HStack>
+
       {saveFailed && (
         <InlineBanner
           variant="error"
@@ -633,7 +783,7 @@ function Checklist() {
         ))}
       </VStack>
 
-      {items.length > lead.length && (
+      {visible.length > lead.length && (
         <Button
           variant="outlined"
           semantic="secondary"
@@ -641,9 +791,18 @@ function Checklist() {
           label={
             expanded
               ? t('showLess', language)
-              : `${t('showAll', language)} (${items.length - lead.length})`
+              : `${t('showAll', language)} (${visible.length - lead.length})`
           }
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(true)}
+        />
+      )}
+      {expanded && (
+        <Button
+          variant="ghost"
+          semantic="secondary"
+          size="xs"
+          label={t('showLess', language)}
+          onClick={() => setExpanded(false)}
         />
       )}
 

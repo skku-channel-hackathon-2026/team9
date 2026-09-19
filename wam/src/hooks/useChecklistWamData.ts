@@ -21,6 +21,8 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const isNew = useWamData('isNew')
   const isInternational = useWamData('isInternational')
   const living = useWamData('living')
+  const university = useWamData('university')
+  const name = useWamData('name')
   const targetToken = useWamData('targetToken')
   const canSave = useWamData('canSave')
 
@@ -33,6 +35,8 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       isNew,
       isInternational,
       living,
+      university,
+      name,
       targetToken,
       canSave,
     })
@@ -61,6 +65,8 @@ export function useChecklistWamData(): ChecklistWamDataResult {
     isNew,
     items,
     living,
+    name,
+    university,
     semesterStart,
     targetToken,
     today,
