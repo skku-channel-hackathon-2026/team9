@@ -98,6 +98,10 @@ export const UI = {
   catAcademicShort: { en: 'School', ko: '학사' },
   addToCalendar: { en: 'Add to calendar', ko: '캘린더에 추가' },
   calendar: { en: 'Calendar', ko: '캘린더' },
+  groupLate: { en: 'Past their date', ko: '기한이 지났어요' },
+  groupSoon: { en: 'This month', ko: '이번 달' },
+  groupLater: { en: 'Later', ko: '나중에' },
+  groupDone: { en: 'Done', ko: '완료' },
   searchPlaceholder: {
     en: 'Search — ARC, tuition, dormitory…',
     ko: '검색 — 외국인등록, 등록금, 기숙사…',
