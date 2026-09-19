@@ -3,8 +3,12 @@ import { z } from "zod";
 /** Where a requirement comes from. National rules apply at every Korean university. */
 export type RequirementScope = "immigration" | "academic" | "life";
 
-/** What a deadline is counted from. */
-export type RequirementAnchor = "arrival" | "semester";
+/**
+ * How a due date is worked out. Immigration deadlines run from the day the
+ * student entered the country; university deadlines are published calendar
+ * dates that are the same for everyone.
+ */
+export type RequirementAnchor = "arrival" | "fixed";
 
 /** Who a requirement actually applies to, so nobody reads irrelevant rows. */
 export type RequirementAudience = "all" | "international" | "domestic";
@@ -15,8 +19,10 @@ export interface Requirement {
   titleKo: string;
   scope: RequirementScope;
   anchor: RequirementAnchor;
-  /** Days after the anchor date by which this must be done. */
-  dueWithinDays: number;
+  /** Days after arrival, for anchor "arrival". */
+  dueWithinDays?: number;
+  /** Published calendar date (YYYY-MM-DD), for anchor "fixed". */
+  dueDate?: string;
   /** Documents to bring. */
   bring: string[];
   where: string;
@@ -40,6 +46,7 @@ export interface Requirement {
  * university. Seeded rules stand in for one school's published dates.
  */
 export const REQUIREMENTS: Requirement[] = [
+  // --- Korean immigration law: the same at every university ---
   {
     id: "arc-registration",
     title: "Register your Alien Registration Card (ARC)",
@@ -54,83 +61,169 @@ export const REQUIREMENTS: Requirement[] = [
       "Certificate of enrolment (재학증명서)",
       "Proof of address",
     ],
-    where: "Local immigration office (book on HiKorea)",
-    fee: "KRW 30,000",
+    where: "Local immigration office — book a slot on HiKorea first",
+    fee: "KRW 30,000, cash only",
     sourceUrl:
-      "https://yiec.yonsei.ac.kr/yiec_en/info/foreigners_registration.do",
+      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139",
     national: true,
     audience: "international",
-    recovery: [],
+    recovery: [
+      "Book the earliest HiKorea slot you can get — the delay is what is penalised, so do this before assembling documents",
+      "Bring a written explanation (사유서) of why you are late",
+      "Bring the fee in cash; cards are not accepted",
+    ],
+  },
+  {
+    id: "address-report",
+    title: "Report your address within 15 days of moving in",
+    titleKo: "체류지 변경 신고 (전입 후 15일 이내)",
+    scope: "immigration",
+    anchor: "arrival",
+    dueWithinDays: 15,
+    bring: [
+      "Passport",
+      "ARC (if already issued)",
+      "Lease or dormitory contract",
+    ],
+    where: "Local immigration office, or the district office (주민센터)",
+    sourceUrl:
+      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=180&PARENT_ID=139",
+    national: true,
+    audience: "international",
+    recovery: [
+      "Report it now — the clock runs from the day you moved, not from today",
+      "The district office (주민센터) is usually faster than immigration for this",
+    ],
   },
   {
     id: "enrolment-certificate",
-    title: "Collect your certificate of enrolment",
+    title: "Get your certificate of enrolment (재학증명서)",
     titleKo: "재학증명서 발급",
     scope: "academic",
     anchor: "arrival",
     dueWithinDays: 60,
-    bring: ["Student ID"],
-    where: "International office or the certificate kiosk",
-    sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
+    bring: ["Your SKKU portal login"],
+    where: "Online at icert.skku.edu, any time",
+    fee: "KRW 500 printed, KRW 750 electronic",
+    sourceUrl: "https://icert.skku.edu",
     national: false,
-    audience: "all",
-    recovery: [],
-  },
-  {
-    id: "address-report",
-    title: "Report your address after moving",
-    titleKo: "체류지 변경 신고",
-    scope: "immigration",
-    anchor: "arrival",
-    dueWithinDays: 104,
-    bring: ["Passport", "ARC", "Lease or dormitory contract"],
-    where: "Immigration office or the local district office",
-    sourceUrl: "https://www.junggu.seoul.kr/english/content.do?cmsid=14873",
-    national: true,
     audience: "international",
-    recovery: [],
+    recovery: [
+      "This one is issued online in minutes, so it is never too late",
+      "Get it before your immigration appointment — the ARC application needs it",
+    ],
   },
-  {
-    id: "health-insurance",
-    title: "Confirm national health insurance enrolment",
-    titleKo: "국민건강보험 가입 확인",
-    scope: "life",
-    anchor: "arrival",
-    dueWithinDays: 180,
-    bring: ["ARC"],
-    where: "NHIS branch office",
-    sourceUrl: "https://www.junggu.seoul.kr/english/content.do?cmsid=14873",
-    national: true,
-    audience: "international",
-    recovery: [],
-  },
+
+  // --- SKKU 2026 Fall semester: published calendar dates ---
   {
     id: "tuition-payment",
-    title: "Pay the tuition instalment",
+    title: "Pay tuition for the Fall semester",
     titleKo: "등록금 납부",
     scope: "academic",
-    anchor: "semester",
-    dueWithinDays: 21,
-    bring: ["Tuition invoice", "Bank account"],
-    where: "Designated bank or the student portal",
-    sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
+    anchor: "fixed",
+    dueDate: "2026-08-27",
+    bring: ["Tuition invoice from the portal", "Your bank details"],
+    where: "Designated bank, or the SKKU portal",
+    sourceUrl: "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do",
     national: false,
     audience: "all",
-    recovery: [],
+    recovery: [
+      "There is a supplementary registration period (추가 등록): 31 Aug – 4 Sep",
+      "If that has also passed, contact the academic affairs team before the semester ends — unpaid registration puts your enrolment at risk",
+    ],
+  },
+  {
+    id: "course-registration",
+    title: "Register for courses",
+    titleKo: "수강신청",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-08-18",
+    bring: ["Your Kingo ID"],
+    where: "SKKU course registration system",
+    sourceUrl:
+      "https://www.skku.edu/skku/campus/skk_comm/notice02.do?mode=view&articleNo=131774",
+    national: false,
+    audience: "all",
+    recovery: [
+      "The add & drop period (수강신청 확인·변경) runs 31 Aug – 5 Sep and is the normal way to fix a missed registration",
+      "Exchange students are excluded from pre-registration and use the first-come-first-served round instead",
+    ],
+  },
+  {
+    id: "course-add-drop",
+    title: "Confirm or change your courses",
+    titleKo: "수강신청 확인·변경",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-09-05",
+    bring: ["Your Kingo ID"],
+    where: "SKKU course registration system",
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    recovery: [
+      "After this closes, withdrawal (수강철회) is the remaining route, and that window is short",
+      "Check your registered courses now — an accidental registration still counts toward your grade",
+    ],
+  },
+  {
+    id: "credit-deletion",
+    title: "Apply to delete credits (학점포기)",
+    titleKo: "학점포기 신청",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-09-11",
+    bring: ["Your Kingo ID"],
+    where: "SKKU portal",
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    recovery: [
+      "This is separate from course withdrawal and closes earlier — check which one you actually needed",
+      "Ask your department office what remains available for the course in question",
+    ],
   },
   {
     id: "course-withdrawal",
-    title: "Decide on course withdrawal",
+    title: "Withdraw from a course (수강철회)",
     titleKo: "수강철회 신청",
     scope: "academic",
-    anchor: "semester",
-    dueWithinDays: 35,
-    bring: ["Advisor approval, if your department requires it"],
-    where: "Student portal",
-    sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
+    anchor: "fixed",
+    dueDate: "2026-09-18",
+    bring: [
+      "Your Kingo ID",
+      "Advisor approval, if your department requires it",
+    ],
+    where: "SKKU portal",
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
     national: false,
     audience: "all",
-    recovery: [],
+    recovery: [
+      "Withdrawal for this semester has closed — the course now stays on your record and will be graded",
+      "Midterms run 19–23 Oct, so there is still time to recover the grade rather than the registration",
+      "Ask your department office whether retaking the course later is possible for your programme",
+    ],
+  },
+  {
+    id: "midterm-exams",
+    title: "Midterm examinations",
+    titleKo: "중간시험",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-10-19",
+    bring: ["Student ID"],
+    where: "Your course classrooms",
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    recovery: [
+      "If you missed an exam through illness, ask the course office about a make-up (추가시험) immediately — these are time-limited",
+    ],
   },
 ];
 
@@ -225,9 +318,8 @@ export interface ChecklistInput {
  */
 export function buildChecklist(input: ChecklistInput): RequirementState[] {
   const arrival = parseIsoDate(input.arrivalDate);
-  const semester = parseIsoDate(input.semesterStart);
   const today = parseIsoDate(input.today);
-  if (arrival === null || semester === null || today === null) return [];
+  if (arrival === null || today === null) return [];
 
   const completed = new Set(input.completed);
 
@@ -236,9 +328,13 @@ export function buildChecklist(input: ChecklistInput): RequirementState[] {
     ? REQUIREMENTS.filter((requirement) => appliesTo(requirement, profile))
     : REQUIREMENTS;
 
-  const states = applicable.map((requirement) => {
-    const anchor = requirement.anchor === "arrival" ? arrival : semester;
-    const due = addDays(anchor, requirement.dueWithinDays);
+  const states = applicable.flatMap((requirement) => {
+    const due =
+      requirement.anchor === "fixed"
+        ? parseIsoDate(requirement.dueDate ?? "")
+        : addDays(arrival, requirement.dueWithinDays ?? 0);
+    // A requirement with no workable date is dropped rather than guessed at.
+    if (due === null) return [];
     const daysLeft = daysBetween(today, due);
     const done = completed.has(requirement.id);
     return {
@@ -259,10 +355,20 @@ export function buildChecklist(input: ChecklistInput): RequirementState[] {
     } satisfies RequirementState;
   });
 
+  /**
+   * Done sinks. Among what is left, the most recently missed comes first: a
+   * deadline that passed yesterday is usually still recoverable, one that
+   * passed a month ago usually is not, so leading with the oldest failure
+   * would put the least actionable row at the top. Everything still ahead
+   * follows in the order it falls due.
+   */
   return states.sort((left, right) => {
-    const leftDone = left.status === "done" ? 1 : 0;
-    const rightDone = right.status === "done" ? 1 : 0;
-    if (leftDone !== rightDone) return leftDone - rightDone;
+    const rank = (item: RequirementState) =>
+      item.status === "done" ? 2 : item.daysLeft < 0 ? 0 : 1;
+    const leftRank = rank(left);
+    const rightRank = rank(right);
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    if (leftRank === 0) return right.daysLeft - left.daysLeft;
     return left.daysLeft - right.daysLeft;
   });
 }

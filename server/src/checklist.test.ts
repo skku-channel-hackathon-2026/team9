@@ -171,3 +171,59 @@ test("every requirement carries recovery steps for being late", () => {
     assert.ok(Array.isArray(item.recovery), `${item.id} has no recovery array`);
   }
 });
+
+test("the most recently missed requirement leads, not the oldest", () => {
+  const items = buildChecklist({ ...BASE, today: "2026-09-19" });
+  const overdue = items.filter((item) => item.status === "overdue");
+  assert.ok(overdue.length > 1, "expected several missed requirements");
+  for (let i = 1; i < overdue.length; i += 1) {
+    assert.ok(
+      overdue[i - 1].daysLeft >= overdue[i].daysLeft,
+      "a longer-missed requirement was listed above a more recent one",
+    );
+  }
+  assert.equal(items[0].id, overdue[0].id);
+});
+
+test("missed requirements come before upcoming ones", () => {
+  const items = buildChecklist({ ...BASE, today: "2026-09-19" });
+  const firstUpcoming = items.findIndex((item) => item.daysLeft >= 0);
+  const lastOverdue = items.map((i) => i.status).lastIndexOf("overdue");
+  if (firstUpcoming !== -1 && lastOverdue !== -1) {
+    assert.ok(lastOverdue < firstUpcoming);
+  }
+});
+
+test("published calendar dates are used verbatim, not derived", () => {
+  const items = buildChecklist({
+    arrivalDate: "2026-01-01",
+    semesterStart: "2026-01-01",
+    completed: [],
+    today: "2026-09-19",
+  });
+  const withdrawal = items.find((item) => item.id === "course-withdrawal");
+  assert.ok(withdrawal);
+  assert.equal(withdrawal.dueDate, "2026-09-18");
+
+  const shifted = buildChecklist({
+    arrivalDate: "2026-06-15",
+    semesterStart: "2026-06-15",
+    completed: [],
+    today: "2026-09-19",
+  });
+  assert.equal(
+    shifted.find((item) => item.id === "course-withdrawal")?.dueDate,
+    "2026-09-18",
+    "a university deadline moved when the student's arrival date changed",
+  );
+});
+
+test("a missed requirement explains how to recover", () => {
+  const items = buildChecklist({ ...BASE, today: "2026-09-19" });
+  for (const item of items.filter((i) => i.status === "overdue")) {
+    assert.ok(
+      item.recovery.length > 0,
+      `${item.id} is overdue but offers no way to recover`,
+    );
+  }
+});
