@@ -124,3 +124,78 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Calendar day markers. A day either costs the student something or it does
+ * not, so there is one dot per day and never one per deadline.
+ */
+.skku-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background-color: transparent;
+}
+
+.skku-dot-late {
+  background-color: var(--skku-late);
+}
+
+.skku-dot-due {
+  background-color: var(--skku-blue);
+}
+
+.skku-dot-done {
+  background-color: var(--skku-green);
+}
+
+/* Today is a ring, so it reads even when the day also carries a deadline. */
+.skku-cal-today {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--skku-late);
+}
+
+/*
+ * The assistant, as the floating button every chat surface has taught this
+ * student to look for. Fixed to the panel rather than the page: the WAM is
+ * its own frame, so bottom-right here is bottom-right of the panel.
+ */
+.skku-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+  padding: 0;
+
+  cursor: pointer;
+
+  background-color: var(--skku-blue);
+  border: none;
+  border-radius: 999px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 12%),
+    0 4px 12px rgb(0 0 0 / 16%);
+
+  transition: transform 160ms ease-out;
+}
+
+.skku-fab:hover {
+  background-color: var(--skku-blue-hover);
+  transform: scale(1.04);
+}
+
+.skku-fab:focus-visible {
+  outline: 2px solid var(--skku-blue);
+  outline-offset: 2px;
+}
+
+/* The last row has to clear the button, or the button sits on top of it. */
+.skku-list {
+  padding-bottom: 56px;
+}

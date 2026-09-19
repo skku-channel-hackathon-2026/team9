@@ -25,27 +25,37 @@ import {
   type SendAsBotInput,
 } from '@tutorial/shared'
 import {
+  Avatar,
   Box,
   Button,
   Checkbox,
   Divider,
   HStack,
+  Icon,
   ProgressBar,
+  SegmentedControl,
+  SegmentedControlItem,
   Text,
   VStack,
 } from '@channel.io/bezier-react/beta'
+import {
+  ChatBubbleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from '@channel.io/bezier-icons'
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
 import Assistant from './Assistant'
+import Calendar from './Calendar'
 import './brand.css'
 import { t } from './strings'
 
 const CATEGORY = [
-  { id: 'all', key: 'all' },
-  { id: 'immigration', key: 'catImmigration' },
-  { id: 'academic', key: 'catAcademic' },
-  { id: 'life', key: 'catLife' },
+  { id: 'all', key: 'all', short: 'all' },
+  { id: 'immigration', key: 'catImmigration', short: 'catImmigrationShort' },
+  { id: 'academic', key: 'catAcademic', short: 'catAcademicShort' },
+  { id: 'life', key: 'catLife', short: 'catLife' },
 ] as const
 
 const SELECT_STYLE = {
@@ -127,6 +137,7 @@ const TodayRule = forwardRef<
 })
 
 function Row({
+  rowRef,
   item,
   language,
   onToggle,
@@ -135,6 +146,7 @@ function Row({
   onOpen,
   late,
 }: {
+  rowRef: (node: HTMLDivElement | null) => void
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
@@ -165,6 +177,7 @@ function Row({
 
   return (
     <Box
+      ref={rowRef}
       className="skku-row"
       paddingVertical={10}
     >
@@ -400,6 +413,8 @@ function Checklist() {
   const [saveFailed, setSaveFailed] = useState(false)
   const todayRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [showCalendar, setShowCalendar] = useState(false)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -838,68 +853,136 @@ function Checklist() {
       className="skku"
       spacing={12}
     >
-      {/* Two lines, not six. Who this is for, and how far through they are —
-          the deadlines themselves start 40px from the top of the panel. */}
-      <VStack spacing={8}>
-        <HStack
-          align="center"
-          justify="between"
-          spacing={8}
+      {/* The panel's whole claim is that it knows who is reading it, so the
+          answers that produced this list are shown rather than implied. */}
+      <HStack
+        align="center"
+        spacing={10}
+      >
+        <Box shrink={0}>
+          <Avatar
+            size="36"
+            name={data.name || pick(school.name, language)}
+          />
+        </Box>
+        <VStack
+          spacing={2}
+          grow={1}
+          style={{ minWidth: 0 }}
         >
           <Text
-            typo="13"
-            color="text-neutral-light"
+            typo="15"
+            bold
+            color="text-neutral"
           >
-            {data.name
-              ? `${t('greeting', language)}, ${data.name}`
-              : pick(school.name, language)}
+            {data.name || pick(school.name, language)}
           </Text>
-          <Box shrink={0}>
-            <HStack
-              align="center"
-              spacing={8}
-            >
-              <Text
-                className="skku-tabular"
-                typo="13"
-                bold
-                color="text-neutral-light"
-              >
-                {`${doneCount}/${items.length}`}
-              </Text>
-              <Button
-                variant="ghost"
-                semantic="secondary"
-                size="xs"
-                label={t('edit', language)}
-                onClick={() => setAsking(true)}
-              />
-            </HStack>
-          </Box>
-        </HStack>
+          <Text
+            typo="12"
+            color="text-neutral-lighter"
+            style={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {[
+              t(isInternational ? 'profileIntl' : 'profileDomestic', language),
+              t(
+                living === 'dorm' ? 'profileDorm' : 'profileCommuter',
+                language
+              ),
+              pick(school.name, language),
+            ].join(' · ')}
+          </Text>
+        </VStack>
+        <Box shrink={0}>
+          <Button
+            variant="ghost"
+            semantic="secondary"
+            size="xs"
+            label={t('edit', language)}
+            onClick={() => setAsking(true)}
+          />
+        </Box>
+      </HStack>
+
+      <VStack spacing={6}>
         <ProgressBar
           value={items.length === 0 ? 0 : doneCount / items.length}
           width="100%"
         />
+        <Text
+          className="skku-tabular"
+          typo="12"
+          color="text-neutral-lighter"
+        >
+          {`${doneCount}/${items.length} ${t('progress', language)}`}
+        </Text>
       </VStack>
 
-      <HStack
-        align="center"
-        spacing={4}
+      {/* The month the list is describing. Collapsed by default: the list is
+          the answer, and the grid is for the student planning a week. */}
+      <VStack spacing={8}>
+        <HStack
+          as="button"
+          align="center"
+          justify="between"
+          onClick={() => setShowCalendar((value) => !value)}
+          style={{
+            cursor: 'pointer',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            font: 'inherit',
+            width: '100%',
+          }}
+        >
+          <Text
+            typo="13"
+            bold
+            color="text-neutral-light"
+          >
+            {t('calendar', language)}
+          </Text>
+          <Icon
+            source={showCalendar ? ChevronUpIcon : ChevronDownIcon}
+            size="16"
+            color="icon-neutral"
+          />
+        </HStack>
+        {showCalendar && (
+          <Calendar
+            items={items}
+            today={data.today}
+            language={language}
+            onPick={(id) => {
+              setCategory('all')
+              setOpenRows([id])
+              rowRefs.current[id]?.scrollIntoView({ block: 'center' })
+            }}
+          />
+        )}
+      </VStack>
+
+      <SegmentedControl
+        type="radiogroup"
+        size="s"
+        width="100%"
+        value={category}
+        onValueChange={setCategory}
       >
         {CATEGORY.filter(
           (option) => option.id === 'all' || counts[option.id] > 0
         ).map((option) => (
-          <Button
+          <SegmentedControlItem
             key={option.id}
-            variant={category === option.id ? 'filled' : 'outlined'}
-            semantic="secondary"
-            size="xs"
-            label={`${t(option.key, language)} ${counts[option.id]}`}
-            onClick={() => setCategory(option.id)}
-          />
+            value={option.id}
+          >
+            {`${t(option.short, language)} ${counts[option.id]}`}
+          </SegmentedControlItem>
         ))}
-      </HStack>
+      </SegmentedControl>
 
       {saveFailed && (
         <InlineBanner
@@ -925,6 +1008,9 @@ function Checklist() {
               />
             )}
             <Row
+              rowRef={(node) => {
+                rowRefs.current[item.id] = node
+              }}
               item={item}
               language={language}
               onToggle={toggle(item.id)}
@@ -944,15 +1030,24 @@ function Checklist() {
         )}
       </Box>
 
+      {/* The assistant is always one tap away without spending a row on
+          saying so, which is the convention every chat surface already
+          taught this student. */}
+      <button
+        type="button"
+        className="skku-fab"
+        aria-label={t('assistantOpen', language)}
+        onClick={() => setConversation('')}
+      >
+        <Icon
+          source={ChatBubbleIcon}
+          size="20"
+          color="icon-inverse-heavier"
+        />
+      </button>
+
       <Divider withoutSideIndent />
       <VStack spacing={6}>
-        <Button
-          variant="outlined"
-          semantic="secondary"
-          size="s"
-          label={t('assistantOpen', language)}
-          onClick={() => setConversation('')}
-        />
         <Button
           variant="outlined"
           semantic="primary"
