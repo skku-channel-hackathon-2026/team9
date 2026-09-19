@@ -849,6 +849,281 @@ export const REQUIREMENTS: Requirement[] = [
       ],
     },
   },
+  {
+    id: "visa-extension",
+    title: {
+      en: "Extend your stay before your visa expires",
+      ko: "체류기간 연장허가 신청",
+    },
+    officialKo: "체류기간 연장허가",
+    scope: "immigration",
+    anchor: "arrival",
+    dueWithinDays: 335,
+    bring: {
+      en: [
+        "Passport and ARC",
+        "Application form (통합신청서)",
+        "Certificate of enrolment (재학증명서)",
+        "Transcript (성적증명서)",
+        "Proof of tuition payment",
+        "Bank balance certificate",
+      ],
+      ko: [
+        "여권 및 외국인등록증",
+        "통합신청서",
+        "재학증명서",
+        "성적증명서",
+        "등록금 납입증명서",
+        "잔고증명서",
+      ],
+    },
+    where: {
+      en: "HiKorea online (e-Application), or your immigration office by appointment",
+      ko: "하이코리아 전자민원, 또는 관할 출입국·외국인청 방문예약",
+    },
+    fee: {
+      en: "KRW 60,000 at the office; less online",
+      ko: "방문 60,000원, 온라인 신청 시 더 저렴",
+    },
+    why: {
+      en: "Your visa runs out on the date printed on your ARC. Extending is a separate application you make before that date — it is not automatic.",
+      ko: "체류기간은 외국인등록증에 적힌 날짜까지입니다. 연장은 그 전에 따로 신청해야 하며 자동으로 연장되지 않습니다.",
+    },
+    sourceUrl: "https://www.hikorea.go.kr/Main.pt?locale=EN",
+    national: true,
+    audience: "international",
+    living: "any",
+    penalty: {
+      en: "overstaying is a fine and, in serious cases, a re-entry ban (Immigration Act Art. 17)",
+      ko: "불법체류 시 범칙금 및 사안에 따라 입국규제 (출입국관리법 제17조)",
+    },
+    recovery: {
+      en: [
+        "If the date has already passed, call 1345 today and ask what to do — do not simply go to class",
+        "HiKorea accepts applications from about four months before expiry, so apply early next time",
+      ],
+      ko: [
+        "이미 기한이 지났다면 오늘 1345에 전화해 조치를 확인하세요. 그냥 수업에 가면 안 됩니다",
+        "만료 약 4개월 전부터 신청할 수 있으니 다음에는 미리 신청하세요",
+      ],
+    },
+  },
+  {
+    id: "work-permit",
+    title: {
+      en: "Get permission before any part-time work",
+      ko: "시간제취업 허가 신청",
+    },
+    officialKo: "시간제취업허가",
+    scope: "immigration",
+    anchor: "arrival",
+    dueWithinDays: 120,
+    bring: {
+      en: [
+        "Passport and ARC",
+        "Confirmation of part-time work (시간제취업 확인서) signed by the employer",
+        "Certificate of enrolment (재학증명서)",
+        "Transcript (성적증명서)",
+      ],
+      ko: [
+        "여권 및 외국인등록증",
+        "시간제취업 확인서 (고용주 서명)",
+        "재학증명서",
+        "성적증명서",
+      ],
+    },
+    where: {
+      en: "HiKorea, or your immigration office",
+      ko: "하이코리아 또는 관할 출입국·외국인청",
+    },
+    why: {
+      en: "A D-2 visa does not allow work by itself. Working without permission risks your visa, not just your job.",
+      ko: "D-2 비자만으로는 취업할 수 없습니다. 허가 없이 일하면 일자리뿐 아니라 체류자격이 위험해집니다.",
+    },
+    sourceUrl: "https://www.hikorea.go.kr/Main.pt?locale=EN",
+    national: true,
+    audience: "international",
+    living: "any",
+    penalty: {
+      en: "a fine, and in serious cases the visa is cancelled (Immigration Act Art. 18)",
+      ko: "범칙금 및 사안에 따라 체류자격 취소 (출입국관리법 제18조)",
+    },
+    recovery: {
+      en: [
+        "Stop working until the permission is granted — the employer is fined too, so they will understand",
+        "Attendance and grades are part of the decision, so keep both up",
+      ],
+      ko: [
+        "허가가 날 때까지 근무를 중단하세요. 고용주도 처벌 대상이라 대부분 이해합니다",
+        "출석률과 성적이 심사 기준이므로 관리하세요",
+      ],
+    },
+  },
+  {
+    id: "bank-account",
+    title: {
+      en: "Open a Korean bank account and get a phone number",
+      ko: "은행 계좌 개설 및 휴대폰 개통",
+    },
+    officialKo: "은행 계좌 개설",
+    scope: "life",
+    anchor: "arrival",
+    dueWithinDays: 100,
+    bring: {
+      en: [
+        "Passport and ARC",
+        "Certificate of enrolment (재학증명서)",
+        "Your Korean phone number",
+      ],
+      ko: ["여권 및 외국인등록증", "재학증명서", "본인 명의 휴대폰 번호"],
+    },
+    where: {
+      en: "Any bank branch near campus — the one inside campus is used to students",
+      ko: "학교 인근 은행 지점 (교내 지점이 유학생 업무에 익숙합니다)",
+    },
+    why: {
+      en: "Tuition refunds, your scholarship and any part-time wage all need a Korean account, and most accounts need the ARC first.",
+      ko: "등록금 환불, 장학금, 아르바이트 급여 모두 국내 계좌가 필요하며, 대부분 외국인등록증이 있어야 개설됩니다.",
+    },
+    sourceUrl: "https://www.hikorea.go.kr/Main.pt?locale=EN",
+    national: false,
+    audience: "international",
+    living: "any",
+    recovery: {
+      en: [
+        "New accounts often have a daily transfer limit for the first months — that is normal, not a mistake",
+        "If a branch refuses, try another: policy on foreign customers varies by branch, not by bank",
+      ],
+      ko: [
+        "신규 계좌는 몇 달간 1일 이체 한도가 낮습니다. 오류가 아니라 정상입니다",
+        "한 지점에서 거절되면 다른 지점을 시도하세요. 외국인 응대 기준은 은행이 아니라 지점마다 다릅니다",
+      ],
+    },
+  },
+  {
+    id: "course-evaluation",
+    title: {
+      en: "Complete course evaluations to unlock your grades",
+      ko: "강의평가 참여",
+    },
+    officialKo: "강의평가",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-14",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: { en: "SKKU portal (GLS)", ko: "성균관대 포털 (GLS)" },
+    why: {
+      en: "Grades stay hidden until every course is evaluated. It is the last thing between you and knowing where you stand.",
+      ko: "강의평가를 모두 마쳐야 성적이 공개됩니다. 성적 확인 전 마지막 절차입니다.",
+    },
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "Evaluations stay open for a short window after the deadline in most terms — check GLS before contacting the office",
+      ],
+      ko: [
+        "대부분 마감 후에도 짧은 기간 열려 있습니다. 학과에 문의하기 전에 GLS를 먼저 확인하세요",
+      ],
+    },
+  },
+  {
+    id: "final-exams",
+    title: { en: "Final examinations", ko: "기말시험" },
+    officialKo: "기말시험",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-14",
+    bring: { en: ["Student ID"], ko: ["학생증"] },
+    where: { en: "Your course classrooms", ko: "각 교과목 강의실" },
+    why: {
+      en: "Fixed on the academic calendar, so it will not move for you.",
+      ko: "학사일정으로 확정된 일정이라 개인 사정으로 변경되지 않습니다.",
+    },
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "Illness on the day: contact the course office immediately about a make-up exam (추가시험) — the window is short",
+      ],
+      ko: [
+        "시험 당일 아프다면 즉시 교과목 담당에 추가시험(추시) 가능 여부를 문의하세요. 기한이 매우 짧습니다",
+      ],
+    },
+  },
+  {
+    id: "grade-appeal",
+    title: {
+      en: "Check your grades and raise anything wrong",
+      ko: "성적 확인 및 이의신청",
+    },
+    officialKo: "성적 이의신청",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-28",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: { en: "SKKU portal (GLS)", ko: "성균관대 포털 (GLS)" },
+    why: {
+      en: "The appeal window is days, not weeks. After it closes the grade is final and counts towards your GPA and your visa renewal.",
+      ko: "이의신청 기간은 몇 주가 아니라 며칠입니다. 마감 후에는 성적이 확정되어 학점과 체류기간 연장 심사에 반영됩니다.",
+    },
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "Contact the instructor directly first — most corrections are made there rather than through the office",
+        "If the window has closed, the department office is the only remaining route and rarely reopens it",
+      ],
+      ko: [
+        "먼저 담당 교수에게 직접 문의하세요. 대부분 그 단계에서 정정됩니다",
+        "기간이 지났다면 학과 사무실이 유일한 경로이며 재개되는 경우는 드뭅니다",
+      ],
+    },
+  },
+  {
+    id: "next-term-registration",
+    title: {
+      en: "Register for next semester's courses",
+      ko: "다음 학기 수강신청",
+    },
+    officialKo: "수강신청",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2027-02-10",
+    bring: {
+      en: ["Your Kingo ID", "Your graduation requirement plan"],
+      ko: ["킹고 ID", "졸업요건 이수 계획"],
+    },
+    where: { en: "SKKU portal (GLS)", ko: "성균관대 포털 (GLS)" },
+    why: {
+      en: "Popular courses fill in seconds. Missing this means taking whatever is left, which can delay graduation by a term.",
+      ko: "인기 과목은 몇 초 만에 마감됩니다. 놓치면 남은 과목만 들어야 하고 졸업이 한 학기 늦어질 수 있습니다.",
+    },
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "The add/drop period after the term starts is the real second chance — seats open as others drop",
+        "Ask your department about 여석 (remaining seats) rather than emailing each instructor",
+      ],
+      ko: [
+        "개강 후 수강정정 기간이 실질적인 두 번째 기회입니다. 철회하는 학생이 생기면 자리가 납니다",
+        "교수님께 개별 메일을 보내기보다 학과에 여석을 문의하세요",
+      ],
+    },
+  },
 ];
 
 export type RequirementStatus =
