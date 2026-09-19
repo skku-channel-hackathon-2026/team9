@@ -20,6 +20,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const today = useWamData('today')
   const isNew = useWamData('isNew')
   const isInternational = useWamData('isInternational')
+  const targetToken = useWamData('targetToken')
   const canSave = useWamData('canSave')
 
   return useMemo(() => {
@@ -30,6 +31,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       today,
       isNew,
       isInternational,
+      targetToken,
       canSave,
     })
 
@@ -57,6 +59,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
     isNew,
     items,
     semesterStart,
+    targetToken,
     today,
   ])
 }

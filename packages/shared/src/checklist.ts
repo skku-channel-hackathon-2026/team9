@@ -64,9 +64,11 @@ export const REQUIREMENTS: Requirement[] = [
     where: "Local immigration office — book a slot on HiKorea first",
     fee: "KRW 30,000, cash only",
     sourceUrl:
-      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139",
+      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=176&PARENT_ID=139&locale=EN",
     national: true,
     audience: "international",
+    penalty:
+      "up to 1 year imprisonment or a fine up to KRW 10,000,000, and possible deportation (Immigration Act Arts. 46, 95)",
     recovery: [
       "Book the earliest HiKorea slot you can get — the delay is what is penalised, so do this before assembling documents",
       "Bring a written explanation (사유서) of why you are late",
@@ -87,12 +89,14 @@ export const REQUIREMENTS: Requirement[] = [
     ],
     where: "Local immigration office, or the district office (주민센터)",
     sourceUrl:
-      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=180&PARENT_ID=139",
+      "https://www.hikorea.go.kr/info/InfoDatail.pt?CAT_SEQ=197&PARENT_ID=146&locale=EN",
     national: true,
     audience: "international",
+    penalty: "a fine of up to KRW 1,000,000 (Immigration Act Art. 98)",
     recovery: [
-      "Report it now — the clock runs from the day you moved, not from today",
-      "The district office (주민센터) is usually faster than immigration for this",
+      "Report it now — the clock runs from the day you moved in, not from today",
+      "The district office (주민센터) can take this, and is usually faster than immigration",
+      "Note some university pages still say 14 days; the Immigration Act says 15",
     ],
   },
   {
@@ -111,6 +115,24 @@ export const REQUIREMENTS: Requirement[] = [
     recovery: [
       "This one is issued online in minutes, so it is never too late",
       "Get it before your immigration appointment — the ARC application needs it",
+    ],
+  },
+
+  {
+    id: "health-insurance",
+    title: "Check your national health insurance card arrived",
+    titleKo: "국민건강보험 가입 확인",
+    scope: "life",
+    anchor: "arrival",
+    dueWithinDays: 120,
+    bring: ["ARC"],
+    where: "NHIS branch office, or the NHIS website",
+    sourceUrl: "https://www.nhis.or.kr/english/index.do",
+    national: true,
+    audience: "international",
+    recovery: [
+      "As a D-2 student you are enrolled automatically from your alien registration date, so there is nothing to apply for",
+      "If no card or bill has reached you, check the address NHIS holds — it follows your registered address",
     ],
   },
 
@@ -413,6 +435,8 @@ export const ChecklistWamArgsSchema = z.object({
   /** True until this person has saved anything, so the UI can ask their date. */
   isNew: z.boolean(),
   isInternational: z.boolean(),
+  /** Short-lived signed permission to post into the chat it was opened from. */
+  targetToken: z.string().optional(),
   /** False when D1 is unavailable, so the UI can explain why ticks won't stick. */
   canSave: z.boolean(),
 });
@@ -456,4 +480,57 @@ export function defaultProgress(today: string): StoredProgress {
     completed: [],
     isInternational: true,
   };
+}
+
+/** Where the university dates in this build come from. */
+export const SCHOOL = {
+  name: "Sungkyunkwan University",
+  nameKo: "성균관대학교",
+  term: "2026 Fall",
+  termKo: "2026학년도 2학기",
+  calendarUrl: "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do",
+} as const;
+
+/**
+ * A plain-text version of what the student is looking at, for posting into the
+ * chat. Korean names are kept alongside the English so the student can show
+ * the right word to an office that will not recognise the translation.
+ */
+export function composeSummary(
+  items: RequirementState[],
+  today: string,
+): string {
+  const missed = items.filter((item) => item.status === "overdue");
+  const upcoming = items.filter(
+    (item) => item.status !== "overdue" && item.status !== "done",
+  );
+
+  const lines: string[] = [`Freshman checklist — as of ${today}`];
+
+  if (missed.length > 0) {
+    lines.push("", `Already passed (${missed.length})`);
+    for (const item of missed) {
+      lines.push(
+        `• ${item.title} (${item.titleKo}) — ${Math.abs(item.daysLeft)} days ago, due ${item.dueDate}`,
+      );
+      const step = item.recovery[0];
+      if (step) lines.push(`    what to do: ${step}`);
+    }
+  }
+
+  if (upcoming.length > 0) {
+    lines.push("", `Still ahead (${upcoming.length})`);
+    for (const item of upcoming.slice(0, 5)) {
+      lines.push(
+        `• ${item.title} (${item.titleKo}) — ${item.daysLeft} days left, due ${item.dueDate}`,
+      );
+    }
+  }
+
+  if (missed.length === 0 && upcoming.length === 0) {
+    lines.push("", "Nothing outstanding.");
+  }
+
+  lines.push("", `University dates: ${SCHOOL.nameKo}, ${SCHOOL.termKo}`);
+  return lines.join("\n");
 }

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import {
   buildChecklist,
+  composeSummary,
   CHECKLIST_FUNCTIONS,
   CommandActionInputSchema,
   defaultProgress,
@@ -47,7 +48,6 @@ import {
 } from "./records.js";
 
 const tutorialMessage = "This is a test message sent by a manager.";
-const botMessage = "This is a test message sent by a bot.";
 
 /** Deadlines here are counted in Seoul, where the offices actually are. */
 function todayInSeoul(): string {
@@ -180,7 +180,7 @@ export class TutorialFunctions {
   }
 
   @Func(TUTORIAL_FUNCTIONS.sendAsBot)
-  @Description("Send a team chat message with the app bot profile")
+  @Description("Post this person's checklist into the chat as the app bot")
   @InputSchema(SendAsBotInputSchema)
   @OutputSchema(z.object({}))
   async sendAsBot(
@@ -202,6 +202,17 @@ export class TutorialFunctions {
       );
     }
 
+    const today = todayInSeoul();
+    const { progress } = await loadProgress(ctx, today);
+    const summary = composeSummary(
+      buildChecklist({
+        ...progress,
+        today,
+        profile: { isInternational: progress.isInternational },
+      }),
+      today,
+    );
+
     const token = await this.tokenManager.getChannelToken({
       channelId: ctx.channel.id,
     });
@@ -214,8 +225,8 @@ export class TutorialFunctions {
         rootMessageId: input.rootMessageId,
         broadcast: input.broadcast,
         dto: {
-          plainText: botMessage,
-          botName: "AppTutorialBot",
+          plainText: summary,
+          botName: "Freshman Checklist",
         },
       });
     } catch {

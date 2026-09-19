@@ -3,6 +3,9 @@ import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
   CHECKLIST_FUNCTIONS,
+  SCHOOL,
+  TUTORIAL_FUNCTIONS,
+  type SendAsBotInput,
   type RequirementState,
   type SaveProgressInput,
 } from '@tutorial/shared'
@@ -67,11 +70,16 @@ function Checklist() {
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
 
   const { call: saveProgress } = useCallFunction<{ saved: boolean }>({
     appId,
     name: CHECKLIST_FUNCTIONS.saveProgress,
+  })
+  const { call: postToChat, loading: posting } = useCallFunction<void>({
+    appId,
+    name: TUTORIAL_FUNCTIONS.sendAsBot,
   })
 
   useEffect(() => {
@@ -140,6 +148,23 @@ function Checklist() {
     },
     [arrivalDate, completed, isInternational, persist]
   )
+
+  const share = useCallback(async () => {
+    if (!data?.targetToken) {
+      setPosted('failed')
+      return
+    }
+    try {
+      const input: SendAsBotInput = {
+        targetToken: data.targetToken,
+        broadcast: false,
+      }
+      await postToChat(input)
+      setPosted('sent')
+    } catch {
+      setPosted('failed')
+    }
+  }, [data, postToChat])
 
   const confirmArrival = useCallback(() => {
     setAsking(false)
@@ -463,6 +488,35 @@ function Checklist() {
             </HStack>
           </VStack>
         ))}
+      </VStack>
+
+      <Divider withoutSideIndent />
+      <VStack spacing={6}>
+        <Button
+          variant="outlined"
+          semantic="primary"
+          size="s"
+          label={
+            posted === 'sent' ? 'Posted to the chat' : 'Post this to the chat'
+          }
+          loading={posting}
+          disabled={posted === 'sent'}
+          onClick={() => void share()}
+        />
+        {posted === 'failed' && (
+          <Text
+            typo="12"
+            color="text-accent-red"
+          >
+            Could not post. This works in a group chat opened from the command.
+          </Text>
+        )}
+        <Text
+          typo="12"
+          color="text-neutral-lighter"
+        >
+          {`University dates: ${SCHOOL.nameKo} ${SCHOOL.termKo}. Immigration rules are national.`}
+        </Text>
       </VStack>
 
       {items.length === 0 && (
