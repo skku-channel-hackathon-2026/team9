@@ -175,6 +175,12 @@ function Checklist() {
     void persist(completed, arrivalDate, isInternational)
   }, [arrivalDate, completed, isInternational, persist])
 
+  const startOver = useCallback(() => {
+    setCompleted([])
+    setAsking(false)
+    void persist([], arrivalDate, isInternational)
+  }, [arrivalDate, isInternational, persist])
+
   if (error || !data) {
     return (
       <InlineBanner
@@ -245,6 +251,13 @@ function Checklist() {
           label="Show my checklist"
           disabled={!arrivalDate}
           onClick={confirmArrival}
+        />
+        <Button
+          variant="ghost"
+          semantic="secondary"
+          size="s"
+          label="Clear everything I have ticked"
+          onClick={startOver}
         />
       </VStack>
     )
