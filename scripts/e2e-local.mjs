@@ -220,7 +220,7 @@ console.log("\nOnly what applies to you");
   );
 }
 
-console.log("\nThe calendar entry point");
+console.log("\nOne command, every entry point");
 {
   const planner = personIn("ch-e2e", `planner-${Date.now()}`);
   await call(
@@ -229,25 +229,34 @@ console.log("\nThe calendar entry point");
     planner,
   );
 
+  // Only /tutorial is registered, and the organisers run registration. A
+  // command declared here but not registered there never appears in Desk, so
+  // declaring one is worse than not having it: the panel would offer a route
+  // that goes nowhere.
   const { body } = await call("extension.command.metadata.getCommands");
-  const calendar = body.result.commands.find(
-    (command) => command.name === "calendar",
+  const declared = body.result.commands;
+  assert.equal(
+    declared.length,
+    1,
+    `expected only /tutorial, got: ${declared.map((c) => c.name).join(", ")}`,
   );
-  assert.ok(calendar, "the calendar command is not published");
-  assert.equal(calendar.actionFunctionName, "tutorial.showCalendar");
-  ok("the calendar command points at tutorial.showCalendar");
+  assert.equal(declared[0].name, "tutorial");
+  assert.equal(declared[0].actionFunctionName, "tutorial.open");
+  ok("only the registered command is published");
 
-  const opened = await call("tutorial.showCalendar", {}, planner);
-  const args = wamArgsOf(opened);
-  assert.equal(args.view, "calendar");
-  ok("it opens the panel on the full dated view");
+  const args = wamArgsOf(await call("tutorial.open", {}, planner));
   assert.equal(args.arrivalDate, "2026-09-01");
-  ok("it is the same person's saved progress, not a second checklist");
+  ok("it opens on that person's saved progress");
+  assert.ok(args.items.length > 0);
+  ok(`every requirement is reachable from it (${args.items.length})`);
 
-  const brief = wamArgsOf(await call("tutorial.open", {}, planner));
-  assert.equal(brief.view, "brief");
-  assert.deepEqual(idsOf(brief.items), idsOf(args.items));
-  ok("both entry points show the same requirements");
+  const dated = wamArgsOf(
+    await call("tutorial.open", { input: { view: "calendar" } }, planner),
+  );
+  assert.equal(dated.view, "calendar");
+  ok("the full dated view is asked for through the same command");
+  assert.deepEqual(idsOf(dated.items), idsOf(args.items));
+  ok("it is the same person's checklist, not a second one");
 }
 
 console.log("\nAsking a question");

@@ -1,12 +1,13 @@
 /*
- * Sungkyunkwan's colours, applied by re-pointing the design tokens the
- * components already resolve rather than by selecting on class names, which
- * are hashed and change between builds.
+ * Sungkyunkwan's colours and the panel's structure.
  *
- * Only the two places a brand colour belongs are changed: the primary action,
- * and the state that means something is finished. Text and icon accents are
- * deliberately left alone — both brand colours are dark, and on the dark theme
- * they would fail against the background they sit on.
+ * The panel is built on one idea: a fixed left rail, 72px wide, that carries a
+ * number on every line — the count in the masthead, the day figure on every
+ * row, the date on the today rule. Everything else hangs off a single vertical
+ * edge. That is the whole layout, and it is why there are no cards.
+ *
+ * Colour is re-pointed through the tokens the components already resolve,
+ * because Bezier's class names are hashed and change between builds.
  */
 
 .skku {
@@ -14,23 +15,189 @@
   --skku-green-hover: #0a5c37;
   --skku-blue: #003daf;
   --skku-blue-hover: #003496;
+  /* The navy's own lightness and chroma rotated to red: it carries the weight
+     of the brand rather than reading as a stock alarm colour. */
+  --skku-late: #a4123a;
 
-  /* the filled primary button */
+  --skku-rail: 72px;
+  --skku-hairline: var(--color-border-neutral);
+
+  /* One accent. Green is the structural colour — progress, completion, the
+     rule under the masthead. Navy is reserved for things you can press. */
+  --color-text-accent-blue: var(--skku-blue);
+  --color-icon-accent-blue: var(--skku-blue);
+  --color-text-accent-red: var(--skku-late);
+  --color-icon-accent-red: var(--skku-late);
   --color-fill-neutral-heaviest: var(--skku-blue);
   --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
-
-  /* anything that reads as finished */
   --color-fill-accent-green-heavier: var(--skku-green);
   --color-fill-accent-green-heavier-hovered: var(--skku-green-hover);
 }
 
 /*
- * The panel grows with its content and a long checklist ran off the bottom of
- * the window, where the actions at the foot could not be reached at all. It is
- * a fixed surface inside a chat, so it scrolls rather than grows.
+ * Dark theme pairs --color-fill-neutral-heaviest with --color-text-inverse and
+ * --color-icon-inverse-heavier, both near-black. Re-pointing the fill alone
+ * gave a navy button carrying near-black text, so the pair moves with it.
  */
-.skku {
-  max-height: 560px;
+[data-bezier-theme='dark'] .skku {
+  --skku-green: #3e9e72;
+  --skku-green-hover: #4aab7e;
+  --skku-blue: #4d7ee0;
+  --skku-blue-hover: #5c8ae8;
+  --skku-late: #f07a93;
+
+  --color-text-inverse: #ffffff;
+  --color-icon-inverse-heavier: #ffffff;
+}
+
+/* The rail. Every number in the panel sits in this column. */
+.skku-rail {
+  flex: none;
+  width: var(--skku-rail);
+}
+
+/*
+ * Only the rows scroll, so the masthead, the calendar and the filter stay put.
+ * The height is measured from the panel: a fixed pixel cap left dead space in
+ * a tall panel and clipped a short one.
+ */
+.skku-list {
+  max-height: calc(100vh - 248px);
+  min-height: 200px;
+  padding-bottom: 56px;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* Figures line up in a column only when the digits are one width. */
+.skku-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Rows are separated, not boxed. The hairline starts at the content edge so
+   the rail reads as one uninterrupted column of figures. */
+.skku-row + .skku-row {
+  border-top: 1px solid var(--skku-hairline);
+}
+
+/* The masthead sits above a green rule: the one place the university's colour
+   is structural rather than decorative. */
+.skku-masthead {
+  border-bottom: 2px solid var(--skku-green);
+}
+
+/*
+ * The today rule. The only saturated line in the list and the only element
+ * that is not a row — it turns a checklist into a timeline and answers "am I
+ * already late" before a word is read.
+ */
+.skku-today {
+  border-top: 1px solid var(--skku-late);
+}
+
+/*
+ * Notes are ruled, not filled. A soft tinted rectangle is the house style of
+ * every generated dashboard; a rule carries the same meaning with no box.
+ */
+.skku-note {
+  border-left: 2px solid var(--skku-hairline);
+}
+
+.skku-note-late {
+  border-left-color: var(--skku-late);
+}
+
+/* Korean body text wraps badly below 150% leading. */
+.skku-prose {
+  line-height: 1.55;
+}
+
+/* Calendar day markers: one dot per day, never one per deadline. */
+.skku-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background-color: transparent;
+}
+
+.skku-dot-late {
+  background-color: var(--skku-late);
+}
+.skku-dot-due {
+  background-color: var(--skku-blue);
+}
+.skku-dot-done {
+  background-color: var(--skku-green);
+}
+
+/* Today is a square, not a circle: the grid is made of squares. */
+.skku-cal-today {
+  box-shadow: inset 0 0 0 1px var(--skku-late);
+}
+
+/*
+ * The assistant, as the floating button every chat surface has taught this
+ * student to look for. Fixed to the panel, which is its own frame.
+ */
+.skku-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+  padding: 0;
+
+  cursor: pointer;
+
+  background-color: var(--skku-green);
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgb(12 109 65 / 32%);
+
+  transition:
+    background-color 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+.skku-fab:hover {
+  background-color: var(--skku-green-hover);
+  box-shadow: 0 4px 14px rgb(12 109 65 / 40%);
+}
+
+.skku-fab:focus-visible {
+  outline: 2px solid var(--skku-green);
+  outline-offset: 3px;
+}
+
+/* A bare button that still reads as pressable, for the row and section heads. */
+.skku-plain {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.skku-plain:focus-visible {
+  outline: 2px solid var(--skku-blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skku *,
+  .skku *::before,
+  .skku *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
