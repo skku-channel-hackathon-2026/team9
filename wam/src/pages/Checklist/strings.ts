@@ -65,6 +65,12 @@ export const UI = {
     en: 'Could not load the checklist.',
     ko: '체크리스트를 불러오지 못했습니다.',
   },
+  ask: { en: 'Ask about this in the chat', ko: '채팅으로 물어보기' },
+  asked: { en: 'Asked in the chat', ko: '채팅에 질문했습니다' },
+  askFailed: {
+    en: 'Could not ask. Reopen the command from a group chat and try again.',
+    ko: '질문을 보내지 못했습니다. 단체 대화에서 커맨드를 다시 실행해 주세요.',
+  },
   urgent: { en: 'URGENT', ko: '긴급' },
   overdueTag: { en: 'OVERDUE', ko: '기한 지남' },
   soonTag: { en: 'SOON', ko: '곧 마감' },

@@ -801,3 +801,61 @@ export function composeSummary(
   lines.push("", `University dates: ${SCHOOL.nameKo}, ${SCHOOL.termKo}`);
   return lines.join("\n");
 }
+
+/**
+ * A question the student can drop into the chat about one requirement, for
+ * ALF or a staff member to answer. The panel can only state rules; the answer
+ * to "but what does this mean for me" belongs in a conversation.
+ *
+ * It carries the Korean term, the date and the source so whoever answers does
+ * not have to go and look any of it up.
+ */
+export function composeQuestion(
+  item: RequirementState,
+  language: Language,
+  today: string,
+): string {
+  const overdue = item.daysLeft < 0;
+  if (language === "ko") {
+    const timing = overdue
+      ? `${Math.abs(item.daysLeft)}일 지났습니다`
+      : `${item.daysLeft}일 남았습니다`;
+    return [
+      `❓ ${item.officialKo} 관련 질문입니다.`,
+      ``,
+      `${item.title} — 마감 ${item.dueDate}, ${timing}.`,
+      overdue
+        ? `이미 기한이 지났는데 지금 제가 할 수 있는 방법이 있을까요?`
+        : `무엇부터 준비해야 하는지 알려주실 수 있을까요?`,
+      ``,
+      `장소: ${item.where}`,
+      `준비물: ${item.bring.join(", ")}`,
+      `출처: ${item.sourceUrl}`,
+      `(${SCHOOL.nameKo} ${SCHOOL.termKo} 기준 · ${today})`,
+    ].join("\n");
+  }
+  const timing = overdue
+    ? `${Math.abs(item.daysLeft)} days ago`
+    : `in ${item.daysLeft} days`;
+  return [
+    `❓ A question about ${item.title} (${item.officialKo}).`,
+    ``,
+    `It is due ${item.dueDate}, ${timing}.`,
+    overdue
+      ? `I have already missed it — is there anything I can still do?`
+      : `Could someone explain what I need to prepare, and why it matters?`,
+    ``,
+    `Where: ${item.where}`,
+    `Bring: ${item.bring.join(", ")}`,
+    `Source: ${item.sourceUrl}`,
+    `(${SCHOOL.nameKo} ${SCHOOL.termKo} · as of ${today})`,
+  ].join("\n");
+}
+
+/** Progress update fields plus the two that ask a question instead of saving. */
+export const AskAboutSchema = z.object({
+  askAbout: z.string().min(1).max(64),
+  targetToken: z.string().min(1),
+});
+
+export type AskAbout = z.infer<typeof AskAboutSchema>;

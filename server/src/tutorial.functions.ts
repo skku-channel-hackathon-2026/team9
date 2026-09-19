@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import {
   buildChecklist,
+  languageFor,
   composeSummary,
+  composeQuestion,
+  AskAboutSchema,
   applyProgressUpdate,
   hasProgressUpdate,
   ProgressUpdateSchema,
@@ -203,6 +206,14 @@ export class TutorialFunctions {
 
     // The WAM saves through this same function. `input` is part of the command
     // contract AppStore already knows, so nothing new has to be registered.
+    // A student can also ask about one requirement from here. The question
+    // goes into the chat the command was opened from, where ALF or a person
+    // can answer it — the panel can state a rule but cannot discuss it.
+    const ask = AskAboutSchema.safeParse(params.input);
+    if (ask.success) {
+      await this.askInChat(ctx, ask.data, today, progress);
+    }
+
     const update = ProgressUpdateSchema.safeParse(params.input);
     if (update.success && hasProgressUpdate(update.data)) {
       const next = applyProgressUpdate(progress, update.data);
@@ -313,6 +324,66 @@ export class TutorialFunctions {
     }
 
     return {};
+  }
+
+  /** Posts one requirement into the chat as a question, as the app bot. */
+  private async askInChat(
+    ctx: Context,
+    ask: { askAbout: string; targetToken: string },
+    today: string,
+    progress: StoredProgress,
+  ): Promise<void> {
+    const target = readTutorialTargetToken(ask.targetToken, appSecret);
+    if (
+      !target ||
+      target.expiresAt <= Date.now() ||
+      target.channelId !== ctx.channel.id ||
+      ctx.caller.type !== "manager" ||
+      target.managerId !== ctx.caller.id
+    ) {
+      throw new FunctionCallError(
+        "The chat target is invalid or expired",
+        FunctionCallErrorCode.BadRequest,
+        { type: "invalidTarget" },
+      );
+    }
+
+    const profile = {
+      isInternational: progress.isInternational,
+      living: progress.living,
+    };
+    const item = buildChecklist({ ...progress, today, profile }).find(
+      (candidate) => candidate.id === ask.askAbout,
+    );
+    if (!item) {
+      throw new FunctionCallError(
+        "That requirement does not apply to you",
+        FunctionCallErrorCode.BadRequest,
+        { type: "unknownRequirement" },
+      );
+    }
+
+    const token = await this.tokenManager.getChannelToken({
+      channelId: ctx.channel.id,
+    });
+    try {
+      await this.nativeClient
+        .createProxyApi(token.accessToken)
+        .writeGroupMessage({
+          channelId: ctx.channel.id,
+          groupId: target.groupId,
+          dto: {
+            plainText: composeQuestion(item, languageFor(profile), today),
+            botName: "Freshman Checklist",
+          },
+        });
+    } catch {
+      throw new FunctionCallError(
+        "The question could not be posted",
+        FunctionCallErrorCode.Internal,
+        { type: "nativeCallFailed" },
+      );
+    }
   }
 
   @Func(CHECKLIST_FUNCTIONS.saveProgress)

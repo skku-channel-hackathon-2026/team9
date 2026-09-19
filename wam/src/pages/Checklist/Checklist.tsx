@@ -67,10 +67,14 @@ function Row({
   item,
   language,
   onToggle,
+  onAsk,
+  askState,
 }: {
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
+  onAsk: () => void
+  askState: 'idle' | 'sent' | 'failed'
 }) {
   const isDone = item.status === 'done'
   const tag = TAG[item.status]
@@ -256,19 +260,42 @@ function Row({
             </Box>
           )}
 
-          <a
-            href={item.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
+          <HStack
+            align="center"
+            spacing={8}
           >
-            <Text
-              as="span"
-              typo="12"
-              color="text-accent-blue"
+            <Button
+              variant="outlined"
+              semantic="primary"
+              size="xs"
+              label={
+                askState === 'sent' ? t('asked', language) : t('ask', language)
+              }
+              disabled={askState === 'sent'}
+              onClick={onAsk}
+            />
+            <a
+              href={item.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
             >
-              {t('source', language)}
+              <Text
+                as="span"
+                typo="12"
+                color="text-accent-blue"
+              >
+                {t('source', language)}
+              </Text>
+            </a>
+          </HStack>
+          {askState === 'failed' && (
+            <Text
+              typo="12"
+              color="text-accent-red"
+            >
+              {t('askFailed', language)}
             </Text>
-          </a>
+          )}
         </VStack>
       </HStack>
     </Box>
@@ -286,6 +313,7 @@ function Checklist() {
   const [expanded, setExpanded] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
+  const [asked, setAsked] = useState<Record<string, 'sent' | 'failed'>>({})
   const [hydrated, setHydrated] = useState(false)
 
   const { call: saveProgress } = useCallFunction<unknown>({
@@ -355,6 +383,24 @@ function Checklist() {
       void persist({ completed: next })
     },
     [completed, persist]
+  )
+
+  const ask = useCallback(
+    (id: string) => async () => {
+      if (!data?.targetToken) {
+        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
+        return
+      }
+      try {
+        await saveProgress({
+          input: { askAbout: id, targetToken: data.targetToken },
+        })
+        setAsked((prev) => ({ ...prev, [id]: 'sent' }))
+      } catch {
+        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
+      }
+    },
+    [data, saveProgress]
   )
 
   const confirm = useCallback(() => {
@@ -571,6 +617,8 @@ function Checklist() {
             item={item}
             language={language}
             onToggle={toggle(item.id)}
+            onAsk={() => void ask(item.id)()}
+            askState={asked[item.id] ?? 'idle'}
           />
         ))}
         {rest.map((item) => (
@@ -579,6 +627,8 @@ function Checklist() {
             item={item}
             language={language}
             onToggle={toggle(item.id)}
+            onAsk={() => void ask(item.id)()}
+            askState={asked[item.id] ?? 'idle'}
           />
         ))}
       </VStack>
