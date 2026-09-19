@@ -4,7 +4,7 @@ import {
   buildChecklist,
   composeAlfQuestion,
   composeGuideAnswer,
-  findGuide,
+  findGuideFor,
   sourcesFor,
   suggestedQuestions,
   ASSISTANT_FUNCTIONS,
@@ -561,11 +561,7 @@ export class TutorialFunctions {
       : null;
     // The row the question was asked from is part of the question, so the
     // guide is matched against both rather than the typed words alone.
-    const guide = findGuide(
-      item
-        ? `${input.question} ${item.title} ${item.officialKo}`
-        : input.question,
-    );
+    const guide = findGuideFor(input.question, item);
 
     const askedInChat = input.targetToken
       ? await this.tryPostToChat(

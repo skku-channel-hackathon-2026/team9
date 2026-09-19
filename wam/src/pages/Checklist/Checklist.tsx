@@ -12,7 +12,7 @@ import {
   buildChecklist,
   calendarUrl,
   composeGuideAnswer,
-  findGuide,
+  findGuideFor,
   HELP,
   sourcesFor,
   suggestedQuestions,
@@ -566,11 +566,7 @@ function Checklist() {
         ? (data?.items.find((candidate) => candidate.id === input.about) ??
           null)
         : null
-      const guide = findGuide(
-        item
-          ? `${input.question} ${item.title} ${item.officialKo}`
-          : input.question
-      )
+      const guide = findGuideFor(input.question, item)
 
       let askedInChat = false
       if (data?.targetToken) {

@@ -142,9 +142,13 @@ test("a domestic student's question is composed in Korean", () => {
     today: TODAY,
     language: "ko",
   });
-  assert.ok(message.includes("내 상황"));
+  assert.ok(message.includes("학생"));
   assert.ok(message.includes("국내 학생"));
   assert.ok(message.includes("1학기"));
+  // The briefing tells ALF how to answer, or it answers about Korea in
+  // general rather than about this student's dates.
+  assert.ok(message.includes("답변 방법"));
+  assert.ok(message.includes("1345"));
 });
 
 test("always offers somewhere to read for yourself", () => {
