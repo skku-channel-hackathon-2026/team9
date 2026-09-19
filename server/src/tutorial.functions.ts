@@ -297,7 +297,11 @@ export class TutorialFunctions {
               channelId: ctx.channel.id,
               groupId: chat.id,
               managerId,
-              expiresAt: Date.now() + 5 * 60 * 1000,
+              // A student reads the panel, thinks, and asks a few minutes
+              // later. Five minutes meant the permission to post into the
+              // chat had usually expired by the time they did, and the
+              // question was answered in the panel and went nowhere.
+              expiresAt: Date.now() + 60 * 60 * 1000,
             },
             appSecret,
           )
@@ -328,6 +332,15 @@ export class TutorialFunctions {
     if (ask.success) {
       await this.askInChat(ctx, ask.data, today, progress);
     }
+
+    // The question view calls this same function. tutorial.ask is not in the
+    // registration AppStore holds, so a question sent through the command's
+    // own input field is the only path that works before re-registration.
+    const asked = AssistantAskInputSchema.safeParse(params.input);
+    const assistantAnswer =
+      asked.success && asked.data.question.trim().length > 0
+        ? await this.ask(ctx, asked.data)
+        : undefined;
 
     const update = ProgressUpdateSchema.safeParse(params.input);
     if (update.success && hasProgressUpdate(update.data)) {
@@ -377,6 +390,7 @@ export class TutorialFunctions {
           name: await this.readManagerName(ctx),
           isNew,
           canSave: hasDatabase(),
+          assistantAnswer,
           view,
         },
       },

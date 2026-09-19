@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
-  ASSISTANT_FUNCTIONS,
   buildChecklist,
   calendarUrl,
   languageFor,
@@ -392,9 +391,14 @@ function Checklist() {
     appId,
     name: TUTORIAL_FUNCTIONS.sendAsBot,
   })
-  const { call: askAssistant } = useCallFunction<AssistantAnswer>({
+  // Questions go through the command's own function for the same reason
+  // saving does: tutorial.ask is not in the registration AppStore holds, and
+  // a call to a function it does not know about never reaches this server.
+  const { call: askAssistant } = useCallFunction<{
+    attributes?: { wamArgs?: { assistantAnswer?: AssistantAnswer } }
+  }>({
     appId,
-    name: ASSISTANT_FUNCTIONS.ask,
+    name: TUTORIAL_FUNCTIONS.open,
   })
 
   useEffect(() => {
@@ -487,12 +491,20 @@ function Checklist() {
    * the permission to post into the chat travel with it.
    */
   const askQuestion = useCallback(
-    (input: { question: string; about?: string }) =>
-      askAssistant({
-        question: input.question,
-        about: input.about,
-        targetToken: data?.targetToken,
-      }),
+    async (input: { question: string; about?: string }) => {
+      const result = await askAssistant({
+        input: {
+          question: input.question,
+          about: input.about,
+          targetToken: data?.targetToken,
+        },
+      })
+      const answer = result?.attributes?.wamArgs?.assistantAnswer
+      if (!answer) {
+        throw new Error('The question could not be answered.')
+      }
+      return answer
+    },
     [askAssistant, data]
   )
 
