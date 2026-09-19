@@ -35,13 +35,14 @@ export function installDevPreview(): void {
       ...defaultProgress(today),
       completed,
       today,
-      profile: { isInternational: true },
+      profile: { isInternational: true, living: 'dorm' },
     }),
     arrivalDate: defaultProgress(today).arrivalDate,
     semesterStart: defaultProgress(today).semesterStart,
     today,
     isNew: new URLSearchParams(window.location.search).has('new'),
     isInternational: true,
+    living: 'dorm',
     canSave: true,
   })
 
