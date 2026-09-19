@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
+  calendarUrl,
   languageFor,
   pick,
   SCHOOL,
@@ -163,6 +164,16 @@ function Row({
           >
             {askState === 'sent' ? t('asked', language) : t('ask', language)}
           </button>
+          {!done && (
+            <a
+              className="cl-link"
+              href={calendarUrl(item, language)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('addToCalendar', language)}
+            </a>
+          )}
           <a
             className="cl-link"
             href={item.sourceUrl}
