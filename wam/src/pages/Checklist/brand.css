@@ -256,3 +256,22 @@
 .skku-ruled + .skku-ruled {
   border-top: 1px solid var(--color-border-neutral);
 }
+
+/* What the student said: their own words, set apart without a speech bubble. */
+.skku-said {
+  max-width: 80%;
+  padding: 8px 12px;
+  background-color: var(--skku-counter);
+  border-radius: 14px 14px 4px 14px;
+}
+
+/* The answer hangs off one green rule rather than sitting in a box. */
+.skku-answer {
+  border-left: 2px solid var(--skku-green);
+}
+
+/* Step numbers line up in their own narrow column. */
+.skku-step {
+  width: 16px;
+  text-align: right;
+}

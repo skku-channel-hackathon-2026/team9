@@ -48,6 +48,82 @@ interface Entry {
  * It takes over the panel rather than sitting under the list: a thread and a
  * ledger in one column means neither is readable.
  */
+/**
+ * The written guidance, given structure.
+ *
+ * It arrives as one string with blank lines in it, and rendering that as a
+ * single run of pre-wrapped text made a correct answer unreadable: a wall with
+ * no way into it. The shape is already in the text — a short unpunctuated line
+ * is a heading, a numbered line is a step — so it is read back out rather than
+ * stored a second time.
+ */
+function Answer({ text }: { text: string }) {
+  const blocks = text.split('\n').filter((line) => line.trim() !== '')
+  return (
+    <VStack spacing={8}>
+      {blocks.map((line, index) => {
+        const trimmed = line.trim()
+        const step = /^(\d+)\.\s*(.*)$/.exec(trimmed)
+        const isHeading =
+          !step && trimmed.length < 24 && !/[.:!?]$/.test(trimmed)
+
+        if (isHeading) {
+          return (
+            <Text
+              key={index}
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {trimmed}
+            </Text>
+          )
+        }
+
+        if (step) {
+          return (
+            <HStack
+              key={index}
+              align="start"
+              spacing={10}
+            >
+              <Box
+                className="skku-step"
+                shrink={0}
+              >
+                <Text
+                  typo="13"
+                  bold
+                  color="text-accent-green"
+                >
+                  {step[1]}
+                </Text>
+              </Box>
+              <Text
+                className="skku-prose"
+                typo="14"
+                color="text-neutral"
+              >
+                {step[2]}
+              </Text>
+            </HStack>
+          )
+        }
+
+        return (
+          <Text
+            key={index}
+            className="skku-prose"
+            typo="14"
+            color="text-neutral"
+          >
+            {trimmed}
+          </Text>
+        )
+      })}
+    </VStack>
+  )
+}
 function Assistant({
   language,
   item,
@@ -136,23 +212,15 @@ function Assistant({
       className="skku"
       spacing={12}
     >
-      <VStack spacing={4}>
-        <Text
-          typo="18"
-          bold
-          color="text-neutral"
-        >
-          {item ? item.title : t('assistantTitle', language)}
-        </Text>
-        <Text
-          typo="12"
-          color="text-neutral-lighter"
-        >
-          {item
-            ? `${item.officialKo} · ${t('assistantLead', language)}`
-            : t('assistantLead', language)}
-        </Text>
-      </VStack>
+      {/* One line. The lead ran to three and pushed the conversation — the
+          thing the student came for — off the top of a 600px panel. */}
+      <Text
+        typo="15"
+        bold
+        color="text-neutral"
+      >
+        {item ? item.officialKo : t('assistantTitle', language)}
+      </Text>
 
       <VStack
         spacing={10}
@@ -169,49 +237,27 @@ function Assistant({
 
         {entries.map((entry, index) =>
           entry.role === 'student' ? (
-            <VStack
+            <HStack
               key={`you-${index}`}
-              spacing={2}
+              justify="end"
             >
-              <Text
-                typo="11"
-                bold
-                color="text-accent-blue"
-              >
-                {t('you', language)}
-              </Text>
-              <Text
-                typo="13"
-                color="text-neutral"
-              >
-                {entry.text}
-              </Text>
-            </VStack>
+              <Box className="skku-said">
+                <Text
+                  typo="14"
+                  color="text-neutral"
+                >
+                  {entry.text}
+                </Text>
+              </Box>
+            </HStack>
           ) : (
             <Box
               key={`answer-${index}`}
-              padding={12}
-              borderRadius="8"
-              borderWidth={1}
-              borderColor="border-neutral"
+              className="skku-answer"
+              paddingLeft={14}
             >
-              <VStack spacing={6}>
-                <Text
-                  typo="11"
-                  bold
-                  color="text-neutral-lighter"
-                >
-                  {t('assistantName', language)}
-                </Text>
-                {/* The steps are carried by the line breaks, so keep them. */}
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  <Text
-                    typo="13"
-                    color="text-neutral"
-                  >
-                    {entry.text}
-                  </Text>
-                </div>
+              <VStack spacing={8}>
+                <Answer text={entry.text} />
                 {entry.sources && entry.sources.length > 0 && (
                   <HStack
                     align="center"
