@@ -412,8 +412,18 @@ export class TutorialFunctions {
       const result = await this.nativeClient
         .createProxyApi(token.accessToken)
         .getManager({ channelId: ctx.channel.id, managerId });
-      const name = result?.manager?.name;
-      return typeof name === "string" && name.length > 0 ? name : undefined;
+      // NativeManager is an opaque model — the display name is not guaranteed
+      // to be on `name`, and reading only that left the greeting blank in
+      // production. Take the first field that actually carries one.
+      const manager = result?.manager as Record<string, unknown> | undefined;
+      for (const key of ["name", "displayName", "username", "email"]) {
+        const value = manager?.[key];
+        if (typeof value === "string" && value.trim().length > 0) {
+          // An email is a fallback, not a name: use the part before the @.
+          return key === "email" ? value.split("@")[0] : value.trim();
+        }
+      }
+      return undefined;
     } catch {
       return undefined;
     }
