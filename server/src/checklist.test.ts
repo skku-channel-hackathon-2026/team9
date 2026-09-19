@@ -125,7 +125,7 @@ test("a domestic student is not shown immigration requirements", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false },
+    profile: { isInternational: false, living: "dorm" },
   });
   assert.ok(items.length > 0);
   assert.ok(
@@ -138,12 +138,12 @@ test("an international student sees strictly more than a domestic one", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: true },
+    profile: { isInternational: true, living: "dorm" },
   });
   const domestic = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false },
+    profile: { isInternational: false, living: "dorm" },
   });
   assert.ok(international.length > domestic.length);
   const domesticIds = new Set(domestic.map((item) => item.id));
@@ -160,7 +160,7 @@ test("omitting a profile keeps every requirement", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: true },
+    profile: { isInternational: true, living: "dorm" },
   });
   assert.equal(all.length, international.length);
 });
@@ -225,5 +225,66 @@ test("a missed requirement explains how to recover", () => {
       item.recovery.length > 0,
       `${item.id} is overdue but offers no way to recover`,
     );
+  }
+});
+
+test("a domestic student reads the checklist in Korean", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: false, living: "dorm" },
+  });
+  const withdrawal = items.find((item) => item.id === "course-withdrawal");
+  assert.ok(withdrawal);
+  assert.equal(withdrawal.title, "수강철회 신청");
+  assert.ok(
+    /[가-힣]/.test(withdrawal.why),
+    "the reason shown to a Korean student was not in Korean",
+  );
+  assert.ok(
+    withdrawal.recovery.every((step) => /[가-힣]/.test(step)),
+    "recovery steps were not translated",
+  );
+});
+
+test("an international student reads the same requirement in English", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm" },
+  });
+  const withdrawal = items.find((item) => item.id === "course-withdrawal");
+  assert.ok(withdrawal);
+  assert.equal(withdrawal.title, "Withdraw from a course");
+  assert.equal(withdrawal.officialKo, "수강철회");
+  assert.ok(!/[가-힣]/.test(withdrawal.why));
+});
+
+test("the Korean name is kept in both languages, to show at an office", () => {
+  for (const language of [true, false]) {
+    const items = buildChecklist({
+      ...BASE,
+      today: "2026-09-19",
+      profile: { isInternational: language, living: "dorm" },
+    });
+    for (const item of items) {
+      assert.ok(
+        /[가-힣]/.test(item.officialKo),
+        `${item.id} has no Korean name to show at an office`,
+      );
+    }
+  }
+});
+
+test("every requirement explains why it applies, in both languages", () => {
+  for (const isInternational of [true, false]) {
+    const items = buildChecklist({
+      ...BASE,
+      today: "2026-09-19",
+      profile: { isInternational, living: "dorm" },
+    });
+    for (const item of items) {
+      assert.ok(item.why.length > 10, `${item.id} has no explanation`);
+    }
   }
 });

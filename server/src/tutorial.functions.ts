@@ -122,6 +122,17 @@ export class CommandExtension {
                 "Leave it out if they have not said.",
             },
             {
+              name: "living",
+              type: "string",
+              required: false,
+              description: "dorm or commuter",
+              alfDescription:
+                'Where the student lives: "dorm" if they live in ' +
+                'university dormitory housing, "commuter" if they travel ' +
+                "in from outside. Requirements that only exist for one of " +
+                "these are hidden from the other. Leave it out if unclear.",
+            },
+            {
               name: "isInternational",
               type: "bool",
               required: false,
@@ -223,10 +234,14 @@ export class TutorialFunctions {
           items: buildChecklist({
             ...progress,
             today,
-            profile: { isInternational: progress.isInternational },
+            profile: {
+              isInternational: progress.isInternational,
+              living: progress.living,
+            },
           }),
           arrivalDate: progress.arrivalDate,
           isInternational: progress.isInternational,
+          living: progress.living,
           semesterStart: progress.semesterStart,
           today,
           isNew,
@@ -265,7 +280,10 @@ export class TutorialFunctions {
       buildChecklist({
         ...progress,
         today,
-        profile: { isInternational: progress.isInternational },
+        profile: {
+          isInternational: progress.isInternational,
+          living: progress.living,
+        },
       }),
       today,
     );
@@ -319,6 +337,7 @@ export class TutorialFunctions {
       semesterStart: current.semesterStart,
       completed: Array.from(new Set(input.completed)),
       isInternational: input.isInternational ?? current.isInternational,
+      living: current.living,
     };
 
     if (!(await writeRecord(recordIdFor(ctx), next))) {
