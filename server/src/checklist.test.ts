@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildChecklist,
+  calendarUrl,
   composeQuestion,
   defaultProgress,
   daysBetween,
@@ -135,7 +136,7 @@ test("a domestic student is not shown immigration requirements", () => {
   );
 });
 
-test("an international student sees strictly more than a domestic one", () => {
+test("each audience sees requirements the other does not", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
@@ -146,24 +147,44 @@ test("an international student sees strictly more than a domestic one", () => {
     today: "2026-03-02",
     profile: { isInternational: false, living: "dorm", university: "skku" },
   });
-  assert.ok(international.length > domestic.length);
+  const intlIds = new Set(international.map((item) => item.id));
   const domesticIds = new Set(domestic.map((item) => item.id));
-  for (const id of domesticIds) {
-    assert.ok(
-      international.some((item) => item.id === id),
-      `${id} should apply to both audiences`,
-    );
-  }
+
+  assert.ok(
+    [...intlIds].some((id) => !domesticIds.has(id)),
+    "nothing applies only to international students",
+  );
+  assert.ok(
+    [...domesticIds].some((id) => !intlIds.has(id)),
+    "nothing applies only to domestic students",
+  );
+  assert.ok(
+    [...intlIds].some((id) => domesticIds.has(id)),
+    "the two audiences share nothing at all, which cannot be right",
+  );
 });
 
-test("omitting a profile keeps every requirement", () => {
+test("omitting a profile filters nothing out", () => {
   const all = buildChecklist({ ...BASE, today: "2026-03-02" });
-  const international = buildChecklist({
-    ...BASE,
-    today: "2026-03-02",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
-  });
-  assert.equal(all.length, international.length);
+  for (const isInternational of [true, false]) {
+    for (const living of ["dorm", "commuter"] as const) {
+      const filtered = buildChecklist({
+        ...BASE,
+        today: "2026-03-02",
+        profile: { isInternational, living, university: "skku" },
+      });
+      assert.ok(
+        filtered.length <= all.length,
+        "a filtered list was longer than the unfiltered one",
+      );
+      for (const item of filtered) {
+        assert.ok(
+          all.some((candidate) => candidate.id === item.id),
+          `${item.id} appears when filtered but not when unfiltered`,
+        );
+      }
+    }
+  }
 });
 
 test("every requirement carries recovery steps for being late", () => {
@@ -368,4 +389,75 @@ test("an unknown university id falls back rather than breaking", () => {
     profile: { isInternational: true, living: "dorm", university: "nonsense" },
   });
   assert.ok(items.length > 0);
+});
+
+test("the calendar link carries the date, the documents and the source", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm", university: "skku" },
+  });
+  const arc = items.find((item) => item.id === "arc-registration");
+  assert.ok(arc);
+  const url = new URL(calendarUrl(arc, "en"));
+  assert.equal(url.host, "calendar.google.com");
+  assert.equal(url.searchParams.get("action"), "TEMPLATE");
+  const dates = url.searchParams.get("dates") ?? "";
+  const [start, end] = dates.split("/");
+  assert.equal(start, arc.dueDate.replace(/-/g, ""));
+  assert.ok(end && end > start, "the event must end after it starts");
+  assert.equal(
+    daysBetween(
+      parseIsoDate(arc.dueDate)!,
+      parseIsoDate(`${end.slice(0, 4)}-${end.slice(4, 6)}-${end.slice(6)}`)!,
+    ),
+    1,
+    "an all-day event should end the following day",
+  );
+  const details = url.searchParams.get("details") ?? "";
+  assert.ok(details.includes(arc.sourceUrl));
+  assert.ok(details.includes(arc.bring[0]!));
+  assert.ok((url.searchParams.get("text") ?? "").includes(arc.officialKo));
+});
+
+test("a domestic student sees the national scholarship deadline", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: false, living: "commuter", university: "skku" },
+  });
+  const scholarship = items.find((item) => item.id === "national-scholarship");
+  assert.ok(
+    scholarship,
+    "the national scholarship is missing for a domestic student",
+  );
+  assert.equal(scholarship.status, "overdue");
+  assert.ok(scholarship.recovery.length > 0);
+});
+
+test("the national scholarship applies at universities we have no calendar for", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: false, living: "dorm", university: "yonsei" },
+  });
+  assert.ok(items.some((item) => item.id === "national-scholarship"));
+});
+
+test("an international student is not shown the domestic-only items", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm", university: "skku" },
+  });
+  for (const id of [
+    "national-scholarship",
+    "student-loan",
+    "resident-registration",
+  ]) {
+    assert.ok(
+      !items.some((item) => item.id === id),
+      `${id} was shown to an international student`,
+    );
+  }
 });

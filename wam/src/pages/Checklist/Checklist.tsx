@@ -2,91 +2,83 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
+  calendarUrl,
   languageFor,
   pick,
-  UNIVERSITIES,
-  universityById,
   SCHOOL,
   TUTORIAL_FUNCTIONS,
+  UNIVERSITIES,
+  universityById,
   type Language,
   type ProgressUpdate,
   type RequirementState,
   type SendAsBotInput,
 } from '@tutorial/shared'
-import {
-  Badge,
-  Box,
-  Button,
-  Checkbox,
-  Divider,
-  HStack,
-  Icon,
-  ProgressBar,
-  Text,
-  VStack,
-} from '@channel.io/bezier-react/beta'
-import {
-  ClockIcon,
-  DocumentIcon,
-  ErrorTriangleIcon,
-  MapPinIcon,
-} from '@channel.io/bezier-icons'
-import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
-import { daysLabel, t } from './strings'
+import { t } from './strings'
+import './checklist.css'
 
 const LEAD_COUNT = 3
 
-const CATEGORY = [
+const CATEGORIES = [
   { id: 'all', key: 'all' },
   { id: 'immigration', key: 'catImmigration' },
   { id: 'academic', key: 'catAcademic' },
   { id: 'life', key: 'catLife' },
 ] as const
 
-const SCOPE_LABEL = {
+const SCOPE_KEY = {
   immigration: 'catImmigration',
   academic: 'catAcademic',
   life: 'catLife',
 } as const
 
-const SELECT_STYLE = {
-  width: '100%',
-  padding: '9px 10px',
-  borderRadius: 8,
-  border: '1px solid var(--bezier-color-border-neutral)',
-  background: 'transparent',
-  color: 'inherit',
-  font: 'inherit',
-}
-
-const TAG = {
-  overdue: { variant: 'red', key: 'overdueTag' },
-  urgent: { variant: 'orange', key: 'urgent' },
-  soon: { variant: 'yellow', key: 'soonTag' },
-  later: { variant: 'neutral-light', key: 'laterTag' },
-  done: { variant: 'green', key: 'done' },
-} as const
-
-const DATE_INPUT_STYLE = {
-  width: '100%',
-  padding: '9px 10px',
-  borderRadius: 8,
-  border: '1px solid var(--bezier-color-border-neutral)',
-  background: 'transparent',
-  color: 'inherit',
-  font: 'inherit',
-}
-
-function dueLabel(item: RequirementState, language: Language): string {
-  if (item.status === 'done') return t('done', language)
-  if (item.daysLeft === 0) return t('dueToday', language)
-  const amount = daysLabel(Math.abs(item.daysLeft), language)
-  if (item.daysLeft < 0) {
-    return language === 'ko' ? `${amount} 지남` : `${amount} overdue`
+/** The number and the word under it, split so the numeral can stand alone. */
+function countdown(
+  item: RequirementState,
+  language: Language
+): { value: string; unit: string } {
+  if (item.status === 'done') {
+    return { value: '✓', unit: t('done', language) }
   }
-  return language === 'ko' ? `${amount} 남음` : `${amount} left`
+  if (item.daysLeft === 0) {
+    return { value: '0', unit: language === 'ko' ? '오늘' : 'today' }
+  }
+  const days = Math.abs(item.daysLeft)
+  if (item.daysLeft < 0) {
+    return {
+      value: `−${days}`,
+      unit:
+        language === 'ko' ? '일 지남' : days === 1 ? 'day late' : 'days late',
+    }
+  }
+  return {
+    value: String(days),
+    unit: language === 'ko' ? '일 남음' : days === 1 ? 'day left' : 'days left',
+  }
+}
+
+function shortDate(iso: string, language: Language): string {
+  const parts = iso.split('-')
+  if (parts.length !== 3) return iso
+  const [year, month, day] = parts
+  if (language === 'ko') return `${Number(month)}월 ${Number(day)}일`
+  const names = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]
+  return `${Number(day)} ${names[Number(month) - 1] ?? month} ${year}`
 }
 
 function Row({
@@ -102,237 +94,100 @@ function Row({
   onAsk: () => void
   askState: 'idle' | 'sent' | 'failed'
 }) {
-  const isDone = item.status === 'done'
-  const tag = TAG[item.status]
+  const count = countdown(item, language)
+  const done = item.status === 'done'
 
   return (
-    <Box
-      padding={12}
-      borderRadius="8"
-      borderWidth={1}
-      borderColor="border-neutral"
+    <div
+      className="cl-row"
+      data-status={item.status}
     >
-      <HStack
-        align="start"
-        spacing={10}
-      >
-        <Checkbox
-          checked={isDone}
-          onCheckedChange={onToggle}
-        />
-        <VStack
-          spacing={6}
-          grow={1}
-        >
-          <HStack
-            align="center"
-            spacing={6}
-          >
-            <Box shrink={0}>
-              <Badge
-                size="xs"
-                variant={tag.variant}
-              >
-                {t(tag.key, language)}
-              </Badge>
-            </Box>
-            <Box shrink={0}>
-              <Badge
-                size="xs"
-                variant="neutral-light"
-              >
-                {t(SCOPE_LABEL[item.scope], language)}
-              </Badge>
-            </Box>
-            {item.national && (
-              <Box shrink={0}>
-                <Badge
-                  size="xs"
-                  variant="blue"
-                >
-                  {t('legal', language)}
-                </Badge>
-              </Box>
-            )}
-          </HStack>
+      <div className="cl-count">
+        <div className="cl-num">{count.value}</div>
+        <div className="cl-unit">{count.unit}</div>
+      </div>
 
-          <Text
-            typo="15"
-            bold
-            color={isDone ? 'text-neutral-lighter' : 'text-neutral'}
-          >
+      <div className="cl-body">
+        <div className="cl-namerow">
+          <input
+            type="checkbox"
+            className="cl-tick"
+            checked={done}
+            onChange={(event) => onToggle(event.target.checked)}
+            aria-label={item.title}
+          />
+          <div className="cl-name">
             {language === 'ko'
               ? item.title
-              : `${item.title} (${item.officialKo})`}
-          </Text>
+              : `${item.title} · ${item.officialKo}`}
+          </div>
+        </div>
 
-          <HStack
-            as="span"
-            align="center"
-            spacing={4}
-          >
-            <Icon
-              source={ClockIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color={
-                item.status === 'overdue'
-                  ? 'text-accent-red'
-                  : 'text-neutral-lighter'
-              }
-            >
-              {`${item.dueDate} · ${dueLabel(item, language)}`}
-            </Text>
-          </HStack>
+        <div className="cl-meta">
+          {`${shortDate(item.dueDate, language)} · ${t(SCOPE_KEY[item.scope], language)}${
+            item.national ? ` · ${t('legal', language)}` : ''
+          }`}
+        </div>
 
-          <Box
-            padding={8}
-            borderRadius="6"
-            borderWidth={1}
-            borderColor="border-neutral"
-          >
-            <Text
-              typo="12"
-              bold
-              color="text-accent-blue"
-            >
-              {t('why', language)}
-            </Text>
-            <Text
-              typo="12"
-              color="text-neutral-light"
-            >
-              {item.why}
-            </Text>
-          </Box>
+        {!done && <div className="cl-why">{item.why}</div>}
 
-          <HStack
-            as="span"
-            align="start"
-            spacing={4}
-          >
-            <Icon
-              source={MapPinIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {item.fee ? `${item.where} · ${item.fee}` : item.where}
-            </Text>
-          </HStack>
-
-          <HStack
-            as="span"
-            align="start"
-            spacing={4}
-          >
-            <Icon
-              source={DocumentIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {item.bring.join(', ')}
-            </Text>
-          </HStack>
-
-          {item.status === 'overdue' && item.recovery.length > 0 && (
-            <Box
-              padding={8}
-              borderRadius="6"
-              borderWidth={1}
-              borderColor="border-neutral"
-            >
-              <HStack
-                as="span"
-                align="center"
-                spacing={4}
+        {item.status === 'overdue' && item.recovery.length > 0 && (
+          <div className="cl-fix">
+            <div className="cl-fix-head">{t('missed', language)}</div>
+            {item.recovery.map((step, index) => (
+              <div
+                className="cl-step"
+                key={step}
               >
-                <Icon
-                  source={ErrorTriangleIcon}
-                  size="12"
-                  color="icon-accent-red"
-                />
-                <Text
-                  as="span"
-                  typo="12"
-                  bold
-                  color="text-accent-red"
-                >
-                  {t('missed', language)}
-                </Text>
-              </HStack>
-              {item.recovery.map((step, index) => (
-                <Text
-                  key={step}
-                  typo="12"
-                  color="text-neutral-light"
-                >
-                  {`${index + 1}. ${step}`}
-                </Text>
-              ))}
-              {item.penalty && (
-                <Text
-                  typo="12"
-                  color="text-accent-red"
-                >
-                  {item.penalty}
-                </Text>
-              )}
-            </Box>
-          )}
+                <span>{index + 1}.</span>
+                <span>{step}</span>
+              </div>
+            ))}
+            {item.penalty && <div className="cl-penalty">{item.penalty}</div>}
+          </div>
+        )}
 
-          <HStack
-            align="center"
-            spacing={8}
+        {!done && (
+          <div className="cl-meta">
+            {item.fee ? `${item.where} · ${item.fee}` : item.where}
+            <br />
+            {item.bring.join(', ')}
+          </div>
+        )}
+
+        <div className="cl-actions">
+          <button
+            type="button"
+            className="cl-ask"
+            disabled={askState === 'sent'}
+            onClick={onAsk}
           >
-            <Button
-              variant="outlined"
-              semantic="primary"
-              size="xs"
-              label={
-                askState === 'sent' ? t('asked', language) : t('ask', language)
-              }
-              disabled={askState === 'sent'}
-              onClick={onAsk}
-            />
+            {askState === 'sent' ? t('asked', language) : t('ask', language)}
+          </button>
+          {!done && (
             <a
-              href={item.sourceUrl}
+              className="cl-link"
+              href={calendarUrl(item, language)}
               target="_blank"
               rel="noreferrer"
             >
-              <Text
-                as="span"
-                typo="12"
-                color="text-accent-blue"
-              >
-                {t('source', language)}
-              </Text>
+              {t('addToCalendar', language)}
             </a>
-          </HStack>
-          {askState === 'failed' && (
-            <Text
-              typo="12"
-              color="text-accent-red"
-            >
-              {t('askFailed', language)}
-            </Text>
           )}
-        </VStack>
-      </HStack>
-    </Box>
+          <a
+            className="cl-link"
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t('source', language)}
+          </a>
+        </div>
+        {askState === 'failed' && (
+          <div className="cl-penalty">{t('askFailed', language)}</div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -379,8 +234,11 @@ function Checklist() {
     }
   }, [data, hydrated])
 
-  const profile = { isInternational, living, university }
-  const language: Language = languageFor(profile)
+  const language: Language = languageFor({
+    isInternational,
+    living,
+    university,
+  })
   const school = universityById(university)
 
   const items = useMemo(
@@ -455,7 +313,9 @@ function Checklist() {
 
   const startOver = useCallback(() => {
     setCompleted([])
-    setAsking(false)
+    setExpanded(false)
+    setCategory('all')
+    setAsking(true)
     void persist({
       completed: [],
       arrivalDate,
@@ -483,52 +343,29 @@ function Checklist() {
   }, [data, postToChat])
 
   if (error || !data) {
-    return (
-      <InlineBanner
-        variant="error"
-        content={error?.message ?? t('loadFailed', 'en')}
-      />
-    )
+    return <div className="cl cl-note">{t('loadFailed', 'en')}</div>
   }
 
   if (asking) {
     return (
-      <VStack spacing={14}>
-        <VStack spacing={4}>
-          <Text
-            typo="11"
-            bold
-            color="text-accent-blue"
-          >
-            {t('setupKicker', language)}
-          </Text>
-          <Text
-            typo="18"
-            bold
-            color="text-neutral"
-          >
-            {t('setupTitle', language)}
-          </Text>
-          <Text
-            typo="13"
-            color="text-neutral-lighter"
-          >
-            {t('setupLead', language)}
-          </Text>
-        </VStack>
+      <div className="cl cl-setup">
+        <div>
+          <div className="cl-title">{t('setupTitle', language)}</div>
+          <div className="cl-sub">{t('setupLead', language)}</div>
+        </div>
 
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
+        <div className="cl-field">
+          <label
+            className="cl-label"
+            htmlFor="cl-uni"
           >
             {t('university', language)}
-          </Text>
+          </label>
           <select
+            id="cl-uni"
+            className="cl-input"
             value={university}
             onChange={(event) => setUniversity(event.target.value)}
-            style={SELECT_STYLE}
           >
             {UNIVERSITIES.map((option) => (
               <option
@@ -540,228 +377,142 @@ function Checklist() {
             ))}
           </select>
           {!school.hasSchoolDates && (
-            <Text
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {t('noSchoolDates', language)}
-            </Text>
+            <div className="cl-note">{t('noSchoolDates', language)}</div>
           )}
-        </VStack>
+        </div>
 
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
+        <div className="cl-field">
+          <label
+            className="cl-label"
+            htmlFor="cl-arrived"
           >
             {t('arrived', language)}
-          </Text>
+          </label>
           <input
+            id="cl-arrived"
             type="date"
+            className="cl-input"
             value={arrivalDate}
             max={data.today}
             onChange={(event) => setArrivalDate(event.target.value)}
-            style={DATE_INPUT_STYLE}
           />
-        </VStack>
+        </div>
 
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
-          >
-            {t('studentType', language)}
-          </Text>
-          <HStack spacing={6}>
-            <Button
-              variant={isInternational ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('international', language)}
+        <div className="cl-field">
+          <div className="cl-label">{t('studentType', language)}</div>
+          <div className="cl-seg">
+            <button
+              type="button"
+              className="cl-segbtn"
+              data-on={isInternational}
               onClick={() => setIsInternational(true)}
-            />
-            <Button
-              variant={isInternational ? 'outlined' : 'filled'}
-              semantic="primary"
-              size="s"
-              label={t('domestic', language)}
+            >
+              {t('international', language)}
+            </button>
+            <button
+              type="button"
+              className="cl-segbtn"
+              data-on={!isInternational}
               onClick={() => setIsInternational(false)}
-            />
-          </HStack>
-        </VStack>
+            >
+              {t('domestic', language)}
+            </button>
+          </div>
+        </div>
 
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
-          >
-            {t('living', language)}
-          </Text>
-          <HStack spacing={6}>
-            <Button
-              variant={living === 'dorm' ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('dorm', language)}
+        <div className="cl-field">
+          <div className="cl-label">{t('living', language)}</div>
+          <div className="cl-seg">
+            <button
+              type="button"
+              className="cl-segbtn"
+              data-on={living === 'dorm'}
               onClick={() => setLiving('dorm')}
-            />
-            <Button
-              variant={living === 'commuter' ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('commuter', language)}
+            >
+              {t('dorm', language)}
+            </button>
+            <button
+              type="button"
+              className="cl-segbtn"
+              data-on={living === 'commuter'}
               onClick={() => setLiving('commuter')}
-            />
-          </HStack>
-        </VStack>
+            >
+              {t('commuter', language)}
+            </button>
+          </div>
+        </div>
 
-        <Button
-          variant="filled"
-          semantic="primary"
-          label={t('show', language)}
+        <button
+          type="button"
+          className="cl-go"
           disabled={!arrivalDate}
           onClick={confirm}
-        />
-        <Button
-          variant="ghost"
-          semantic="secondary"
-          size="s"
-          label={t('clear', language)}
-          onClick={startOver}
-        />
-        <HStack
-          align="center"
-          spacing={6}
         >
-          <Text
-            typo="11"
-            color="text-neutral-lighter"
-          >
-            {t('demo', language)}
-          </Text>
-          <Button
-            variant="ghost"
-            semantic="secondary"
-            size="xs"
-            label={t('demoIntl', language)}
-            onClick={() => {
-              setIsInternational(true)
-              setLiving('dorm')
-              setUniversity('skku')
-            }}
-          />
-          <Button
-            variant="ghost"
-            semantic="secondary"
-            size="xs"
-            label={t('demoDomestic', language)}
-            onClick={() => {
-              setIsInternational(false)
-              setLiving('commuter')
-              setUniversity('skku')
-            }}
-          />
-        </HStack>
-      </VStack>
+          {t('show', language)}
+        </button>
+        <button
+          type="button"
+          className="cl-quiet"
+          onClick={startOver}
+        >
+          {t('clear', language)}
+        </button>
+      </div>
     )
   }
 
   const visible =
     category === 'all' ? items : items.filter((item) => item.scope === category)
   const outstanding = visible.filter((item) => item.status !== 'done')
-  const lead = expanded ? visible : outstanding.slice(0, LEAD_COUNT)
-  const rest: RequirementState[] = []
+  const shown = expanded ? visible : outstanding.slice(0, LEAD_COUNT)
   const doneCount = items.filter((item) => item.status === 'done').length
-  const counts = {
+  const counts: Record<string, number> = {
     all: items.length,
     immigration: items.filter((i) => i.scope === 'immigration').length,
     academic: items.filter((i) => i.scope === 'academic').length,
     life: items.filter((i) => i.scope === 'life').length,
-  } as Record<string, number>
+  }
 
   return (
-    <VStack spacing={12}>
-      <VStack spacing={6}>
+    <div className="cl">
+      <div className="cl-head">
         {data.name && (
-          <Text
-            typo="13"
-            color="text-neutral-lighter"
-          >
-            {`${t('greeting', language)}, ${data.name} · ${pick(school.name, language)}`}
-          </Text>
+          <div className="cl-who">
+            {`${data.name} · ${pick(school.name, language)}`}
+          </div>
         )}
-        <Text
-          typo="18"
-          bold
-          color="text-neutral"
-        >
+        <div className="cl-title">
           {outstanding.length > 0
             ? `${Math.min(outstanding.length, LEAD_COUNT)} ${t('headline', language)}`
             : t('headlineNone', language)}
-        </Text>
-        <Text
-          typo="12"
-          color="text-neutral-lighter"
-        >
-          {t('filtered', language)}
-        </Text>
-        <ProgressBar
-          value={items.length === 0 ? 0 : doneCount / items.length}
-          width="100%"
-        />
-        <HStack
-          align="center"
-          justify="between"
-          spacing={6}
-        >
-          <Text
-            typo="12"
-            color="text-neutral-lighter"
-          >
-            {`${doneCount}/${items.length} ${t('progress', language)} · ${arrivalDate}`}
-          </Text>
-          <Box shrink={0}>
-            <Button
-              variant="ghost"
-              semantic="secondary"
-              size="xs"
-              label={t('changeAnswers', language)}
-              onClick={() => setAsking(true)}
-            />
-          </Box>
-        </HStack>
-      </VStack>
+        </div>
+        <div className="cl-sub">
+          {`${doneCount}/${items.length} ${t('progress', language)} · ${t('filtered', language)}`}
+        </div>
+      </div>
 
-      <HStack
-        align="center"
-        spacing={4}
-      >
-        {CATEGORY.filter(
-          (option) => option.id === 'all' || counts[option.id] > 0
+      <div className="cl-filters">
+        {CATEGORIES.filter(
+          (option) => option.id === 'all' || counts[option.id]
         ).map((option) => (
-          <Button
+          <button
+            type="button"
             key={option.id}
-            variant={category === option.id ? 'filled' : 'outlined'}
-            semantic="secondary"
-            size="xs"
-            label={`${t(option.key, language)} ${counts[option.id]}`}
+            className="cl-chip"
+            data-on={category === option.id}
             onClick={() => setCategory(option.id)}
-          />
+          >
+            {`${t(option.key, language)} ${counts[option.id]}`}
+          </button>
         ))}
-      </HStack>
+      </div>
 
       {saveFailed && (
-        <InlineBanner
-          variant="error"
-          content={t('saveFailed', language)}
-        />
+        <div className="cl-penalty">{t('saveFailed', language)}</div>
       )}
 
-      <VStack spacing={8}>
-        {lead.map((item) => (
+      <div className="cl-list">
+        {shown.map((item) => (
           <Row
             key={item.id}
             item={item}
@@ -771,70 +522,48 @@ function Checklist() {
             askState={asked[item.id] ?? 'idle'}
           />
         ))}
-        {rest.map((item) => (
-          <Row
-            key={item.id}
-            item={item}
-            language={language}
-            onToggle={toggle(item.id)}
-            onAsk={() => void ask(item.id)()}
-            askState={asked[item.id] ?? 'idle'}
-          />
-        ))}
-      </VStack>
+      </div>
 
-      {visible.length > lead.length && (
-        <Button
-          variant="outlined"
-          semantic="secondary"
-          size="s"
-          label={
-            expanded
-              ? t('showLess', language)
-              : `${t('showAll', language)} (${visible.length - lead.length})`
-          }
-          onClick={() => setExpanded(true)}
-        />
-      )}
-      {expanded && (
-        <Button
-          variant="ghost"
-          semantic="secondary"
-          size="xs"
-          label={t('showLess', language)}
-          onClick={() => setExpanded(false)}
-        />
-      )}
-
-      <Divider withoutSideIndent />
-      <VStack spacing={6}>
-        <Button
-          variant="outlined"
-          semantic="primary"
-          size="s"
-          label={
-            posted === 'sent' ? t('posted', language) : t('post', language)
-          }
-          loading={posting}
-          disabled={posted === 'sent'}
-          onClick={() => void share()}
-        />
-        {posted === 'failed' && (
-          <Text
-            typo="12"
-            color="text-accent-red"
+      <div className="cl-foot">
+        {visible.length > shown.length && (
+          <button
+            type="button"
+            className="cl-quiet"
+            onClick={() => setExpanded(true)}
           >
-            {t('postFailed', language)}
-          </Text>
+            {`${t('showAll', language)} (${visible.length - shown.length})`}
+          </button>
         )}
-        <Text
-          typo="12"
-          color="text-neutral-lighter"
+        {expanded && (
+          <button
+            type="button"
+            className="cl-quiet"
+            onClick={() => setExpanded(false)}
+          >
+            {t('showLess', language)}
+          </button>
+        )}
+        <button
+          type="button"
+          className="cl-quiet"
+          onClick={() => setAsking(true)}
         >
-          {`${SCHOOL.nameKo} ${SCHOOL.termKo}`}
-        </Text>
-      </VStack>
-    </VStack>
+          {t('changeAnswers', language)}
+        </button>
+        <button
+          type="button"
+          className="cl-go"
+          disabled={posted === 'sent' || posting}
+          onClick={() => void share()}
+        >
+          {posted === 'sent' ? t('posted', language) : t('post', language)}
+        </button>
+        {posted === 'failed' && (
+          <div className="cl-penalty">{t('postFailed', language)}</div>
+        )}
+        <div className="cl-note">{`${SCHOOL.nameKo} ${SCHOOL.termKo}`}</div>
+      </div>
+    </div>
   )
 }
 

@@ -619,6 +619,226 @@ export const REQUIREMENTS: Requirement[] = [
       ],
     },
   },
+
+  // --- National, run by the government rather than any university ---
+  {
+    id: "national-scholarship",
+    title: {
+      en: "Apply for the national scholarship",
+      ko: "국가장학금 신청",
+    },
+    officialKo: "국가장학금",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-09-09",
+    bring: {
+      en: [
+        "Public certificate or simple authentication",
+        "Household income consent from your parents",
+      ],
+      ko: ["공동인증서 또는 간편인증", "부모님의 가구원 소득 동의"],
+    },
+    where: {
+      en: "Korea Student Aid Foundation (kosaf.go.kr), not your university",
+      ko: "한국장학재단 (kosaf.go.kr), 학교가 아닙니다",
+    },
+    why: {
+      en: "It is run nationally, so your university will not chase you about it.",
+      ko: "학교가 아니라 한국장학재단이 운영하므로 학교에서 따로 챙겨주지 않습니다.",
+    },
+    sourceUrl: "https://www.kosaf.go.kr",
+    national: true,
+    audience: "domestic",
+    living: "any",
+    recovery: {
+      en: [
+        "Check whether a second round (2차 신청) is open — there usually is one, and it is the normal way back in",
+        "If both rounds have closed, apply for the next semester as soon as the window opens; missing one semester does not affect the next",
+        "Ask your university's scholarship office whether an internal scholarship (교내장학금) can cover this semester instead",
+      ],
+      ko: [
+        "2차 신청 기간이 열려 있는지 확인하세요. 보통 2차가 있으며 이것이 정상적인 보완 방법입니다",
+        "두 차수 모두 지났다면 다음 학기 신청 기간이 열리는 즉시 신청하세요. 한 학기를 놓쳐도 다음 학기에는 영향이 없습니다",
+        "이번 학기는 교내장학금으로 대체 가능한지 학교 장학 담당에 문의하세요",
+      ],
+    },
+  },
+  {
+    id: "student-loan",
+    title: { en: "Apply for a student loan", ko: "학자금대출 신청" },
+    officialKo: "학자금대출",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-11-17",
+    bring: {
+      en: ["Public certificate or simple authentication"],
+      ko: ["공동인증서 또는 간편인증"],
+    },
+    where: {
+      en: "Korea Student Aid Foundation (kosaf.go.kr)",
+      ko: "한국장학재단 (kosaf.go.kr)",
+    },
+    why: {
+      en: "Both tuition and living-cost loans close on the same national deadline.",
+      ko: "등록금대출과 생활비대출 모두 같은 전국 마감일을 따릅니다.",
+    },
+    sourceUrl: "https://www.kosaf.go.kr",
+    national: true,
+    audience: "domestic",
+    living: "any",
+    recovery: {
+      en: [
+        "The window closes for the semester; the next one opens with the following semester's registration period",
+        "Ask your university about paying tuition in instalments (분할납부) for this semester instead",
+      ],
+      ko: [
+        "이번 학기 신청은 마감되며, 다음 신청은 다음 학기 등록 기간에 열립니다",
+        "이번 학기는 학교의 등록금 분할납부 제도를 이용할 수 있는지 문의하세요",
+      ],
+    },
+  },
+  {
+    id: "resident-registration",
+    title: {
+      en: "Report your move-in within 14 days",
+      ko: "전입신고 (이사한 날부터 14일 이내)",
+    },
+    officialKo: "전입신고",
+    scope: "life",
+    anchor: "arrival",
+    dueWithinDays: 14,
+    bring: {
+      en: ["ID card", "Lease contract, if you have one"],
+      ko: ["신분증", "임대차계약서 (있는 경우)"],
+    },
+    where: {
+      en: "District office (주민센터), or online at gov.kr",
+      ko: "주민센터 또는 정부24 (gov.kr) 온라인",
+    },
+    why: {
+      en: "Required by law after moving, and it is what most deposit protections depend on.",
+      ko: "이사 후 법으로 정해진 신고이며, 전세·월세 보증금 보호의 전제가 됩니다.",
+    },
+    sourceUrl: "https://www.gov.kr",
+    national: true,
+    audience: "domestic",
+    living: "any",
+    recovery: {
+      en: [
+        "Do it online at gov.kr — it takes a few minutes and does not require a visit",
+        "If you rent, do this before anything else: confirmation of move-in is what protects your deposit",
+      ],
+      ko: [
+        "정부24(gov.kr)에서 온라인으로 몇 분이면 처리되며 방문할 필요가 없습니다",
+        "임차 중이라면 가장 먼저 하세요. 확정일자와 함께 보증금 보호의 전제가 됩니다",
+      ],
+    },
+  },
+  {
+    id: "transport-pass",
+    title: {
+      en: "Register for a public transport refund pass",
+      ko: "대중교통비 환급 패스 등록",
+    },
+    officialKo: "K-패스 / 기후동행패스",
+    scope: "life",
+    anchor: "arrival",
+    dueWithinDays: 30,
+    bring: {
+      en: ["A transport card or a card tied to the scheme"],
+      ko: ["교통카드 또는 해당 카드"],
+    },
+    where: {
+      en: "K-패스 app or site; 기후동행패스 for Seoul; 더경기패스 for Gyeonggi",
+      ko: "K-패스 앱·홈페이지, 서울은 기후동행패스, 경기는 더경기패스",
+    },
+    why: {
+      en: "Commuting costs are refundable and nobody tells first-years this exists.",
+      ko: "통학 교통비를 환급받을 수 있지만 신입생에게 따로 안내되지 않습니다.",
+    },
+    sourceUrl: "https://korea-pass.kr",
+    national: true,
+    audience: "all",
+    living: "commuter",
+    recovery: {
+      en: [
+        "Registering late only costs you the refunds you have already missed — sign up now and it applies from here",
+        "Check which scheme covers where you actually live; Seoul and Gyeonggi run different ones",
+      ],
+      ko: [
+        "늦게 등록해도 이미 지난 환급분만 놓칠 뿐이며, 지금 등록하면 이후부터 적용됩니다",
+        "거주지에 따라 제도가 다르므로 서울·경기 중 본인에게 맞는 것을 확인하세요",
+      ],
+    },
+  },
+  {
+    id: "student-id-card",
+    title: {
+      en: "Get your student card issued",
+      ko: "다기능학생증 발급 신청",
+    },
+    officialKo: "다기능학생증",
+    scope: "life",
+    anchor: "arrival",
+    dueWithinDays: 45,
+    bring: {
+      en: ["A photo", "Your bank details, if the card doubles as a bank card"],
+      ko: ["사진", "제휴 은행 계좌 정보 (체크카드 겸용인 경우)"],
+    },
+    where: {
+      en: "The partner bank branch on campus, or the student services office",
+      ko: "교내 제휴 은행 지점 또는 학생지원팀",
+    },
+    why: {
+      en: "It is the card that opens buildings, borrows books and often pays your fare.",
+      ko: "출입, 도서 대출, 교통카드 기능이 모두 이 카드에 들어 있습니다.",
+    },
+    sourceUrl: "https://www.skku.edu",
+    national: false,
+    audience: "all",
+    living: "commuter",
+    recovery: {
+      en: [
+        "A temporary card is usually available from the student services office while the real one is made",
+        "Library and building access can normally be enabled on your phone in the meantime",
+      ],
+      ko: [
+        "정식 발급 전까지 학생지원팀에서 임시 카드를 받을 수 있습니다",
+        "그동안 모바일로 도서관·출입 기능을 대체할 수 있는지 확인하세요",
+      ],
+    },
+  },
+  {
+    id: "mandatory-education",
+    title: {
+      en: "Complete the compulsory prevention education",
+      ko: "폭력예방교육 이수",
+    },
+    officialKo: "폭력예방교육",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-31",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: { en: "i-Campus, online", ko: "i-Campus 온라인" },
+    why: {
+      en: "It is required by law, and not completing it can hold up other paperwork.",
+      ko: "법정의무교육이며, 미이수 시 다른 행정 절차가 막힐 수 있습니다.",
+    },
+    sourceUrl: "https://www.skku.edu",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "It is online and takes under an hour, so it can be cleared the same day",
+        "If the course has closed on i-Campus, ask the student services office to reopen it",
+      ],
+      ko: [
+        "온라인 과정이며 한 시간이 걸리지 않으므로 당일에 이수할 수 있습니다",
+        "i-Campus에서 과정이 닫혔다면 학생지원팀에 재오픈을 요청하세요",
+      ],
+    },
+  },
 ];
 
 export type RequirementStatus =
@@ -1051,3 +1271,47 @@ export const AskAboutSchema = z.object({
 });
 
 export type AskAbout = z.infer<typeof AskAboutSchema>;
+
+/**
+ * A link that opens the reader's calendar with this deadline already filled
+ * in. Deliberately a plain URL rather than a calendar integration: it needs no
+ * account, no permission and no API key, and it works with whichever Google
+ * account the student is already signed in to.
+ *
+ * The event is all-day on the due date. The description carries what to bring,
+ * where to go and the source, so the entry is still useful in two months when
+ * the checklist is closed.
+ */
+export function calendarUrl(
+  item: RequirementState,
+  language: Language,
+): string {
+  const compact = item.dueDate.replace(/-/g, "");
+  const parsed = parseIsoDate(item.dueDate);
+  const end =
+    parsed === null ? compact : toIsoDate(addDays(parsed, 1)).replace(/-/g, "");
+
+  const lines =
+    language === "ko"
+      ? [
+          `장소: ${item.where}`,
+          `준비물: ${item.bring.join(", ")}`,
+          item.fee ? `비용: ${item.fee}` : "",
+          `출처: ${item.sourceUrl}`,
+        ]
+      : [
+          `Where: ${item.where}`,
+          `Bring: ${item.bring.join(", ")}`,
+          item.fee ? `Cost: ${item.fee}` : "",
+          `Source: ${item.sourceUrl}`,
+        ];
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `${item.title} (${item.officialKo})`,
+    dates: `${compact}/${end}`,
+    details: lines.filter(Boolean).join("\n"),
+    location: item.where,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}

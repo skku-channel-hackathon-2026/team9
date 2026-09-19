@@ -84,6 +84,7 @@ export const UI = {
   catImmigration: { en: 'Immigration', ko: '출입국' },
   catAcademic: { en: 'Academic', ko: '학사' },
   catLife: { en: 'Living', ko: '생활' },
+  addToCalendar: { en: 'Add to calendar', ko: '캘린더에 추가' },
   demo: { en: 'DEMO', ko: '데모' },
   demoIntl: { en: 'International · Dorm', ko: '유학생 · 기숙사' },
   demoDomestic: { en: 'Domestic · Commuter', ko: '국내학생 · 통학' },
