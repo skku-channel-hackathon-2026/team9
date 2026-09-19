@@ -160,20 +160,6 @@ function Row({
   onBook: (when: string) => void
 }) {
   const isDone = item.status === 'done'
-  const label = (key: 'why' | 'bring' | 'where') => (
-    <Box
-      shrink={0}
-      width={48}
-    >
-      <Text
-        typo="13"
-        bold
-        color="text-neutral-lighter"
-      >
-        {t(key, language)}
-      </Text>
-    </Box>
-  )
 
   return (
     <Box
@@ -261,58 +247,229 @@ function Row({
         </Box>
       </HStack>
 
+      {/*
+        The counter card. The one thing in the panel meant to leave it: a
+        student holds this up at the window, so it is set to be read across a
+        desk, selectable to be screenshotted, and it does nothing when tapped.
+      */}
       {open && (
         <Box
-          className="skku-note"
-          paddingLeft={12}
-          marginTop={10}
+          className="skku-counter"
+          padding={16}
+          marginTop={12}
           marginLeft={84}
         >
-          <VStack spacing={12}>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('why')}
+          <VStack spacing={14}>
+            <VStack spacing={2}>
               <Text
-                className="skku-prose"
-                typo="14"
+                typo="24"
+                bold
                 color="text-neutral"
               >
-                {item.why}
+                {item.officialKo}
               </Text>
-            </HStack>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('bring')}
-              <VStack spacing={4}>
-                {item.bring.map((each) => (
+              <Text
+                typo="15"
+                color="text-neutral-light"
+              >
+                {item.title}
+              </Text>
+            </VStack>
+
+            <VStack spacing={0}>
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
+              >
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('where', language)}
+                    </Text>
+                  </Box>
+                  <a
+                    href={item.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: 'var(--skku-blue)',
+                      fontWeight: 600,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    <Text
+                      as="span"
+                      typo="15"
+                      color="text-accent-blue"
+                    >
+                      {item.where}
+                    </Text>
+                  </a>
+                </HStack>
+              </Box>
+
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
+              >
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('bring', language)}
+                    </Text>
+                  </Box>
                   <Text
-                    key={each}
                     className="skku-prose"
-                    typo="14"
+                    typo="15"
                     color="text-neutral"
                   >
-                    {each}
+                    {item.bring.join(' · ')}
                   </Text>
-                ))}
-              </VStack>
-            </HStack>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('where')}
-              <Text
-                className="skku-prose"
-                typo="14"
-                color="text-neutral"
+                </HStack>
+              </Box>
+
+              {item.fee && (
+                <Box
+                  className="skku-ruled"
+                  paddingVertical={10}
+                >
+                  <HStack
+                    align="start"
+                    spacing={12}
+                  >
+                    <Box
+                      className="skku-cell"
+                      shrink={0}
+                    >
+                      <Text
+                        typo="13"
+                        bold
+                        color="text-neutral-lighter"
+                      >
+                        {t('feeLabel', language)}
+                      </Text>
+                    </Box>
+                    <Text
+                      typo="15"
+                      color={
+                        /현금|cash/i.test(item.fee)
+                          ? 'text-accent-red'
+                          : 'text-neutral'
+                      }
+                    >
+                      {item.fee}
+                    </Text>
+                  </HStack>
+                </Box>
+              )}
+
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
               >
-                {item.fee ? `${item.where} · ${item.fee}` : item.where}
-              </Text>
-            </HStack>
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('dueLabel', language)}
+                    </Text>
+                  </Box>
+                  <Text
+                    className="skku-tabular"
+                    typo="15"
+                    bold
+                    color={late ? 'text-accent-red' : 'text-neutral'}
+                  >
+                    {shortDate(item.dueDate, language)}
+                  </Text>
+                </HStack>
+              </Box>
+
+              {item.penalty && (
+                <Box
+                  className="skku-ruled"
+                  paddingVertical={10}
+                >
+                  <HStack
+                    align="start"
+                    spacing={12}
+                  >
+                    <Box
+                      className="skku-cell"
+                      shrink={0}
+                    >
+                      <Text
+                        typo="13"
+                        bold
+                        color="text-neutral-lighter"
+                      >
+                        {t('basisLabel', language)}
+                      </Text>
+                    </Box>
+                    <Text
+                      className="skku-prose"
+                      typo="13"
+                      color="text-neutral-light"
+                    >
+                      {item.penalty}
+                    </Text>
+                  </HStack>
+                </Box>
+              )}
+            </VStack>
+          </VStack>
+        </Box>
+      )}
+
+      {open && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <VStack spacing={4}>
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('why', language)}
+            </Text>
+            <Text
+              className="skku-prose"
+              typo="14"
+              color="text-neutral"
+            >
+              {item.why}
+            </Text>
           </VStack>
         </Box>
       )}

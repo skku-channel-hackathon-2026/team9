@@ -7,6 +7,7 @@
 // The signing key is the throwaway one from .dev.vars, so this is local only.
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
+import { buildChecklist } from "../packages/shared/dist/index.js";
 
 const origin = process.env.E2E_ORIGIN ?? "http://127.0.0.1:8797";
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)) {
@@ -31,7 +32,33 @@ const personIn = (channelId, id) => ({
   caller: { type: "manager", id },
   channel: { id: channelId },
 });
-const wamArgsOf = (result) => result.body?.result?.attributes?.wamArgs;
+/**
+ * Desk passes wamArgs in the WAM's own URL, so the computed rows do not travel
+ * — twenty-five of them came to 28KB encoded and the panel got a 414 instead
+ * of loading. Only the stored answers cross the wire and the panel builds the
+ * checklist itself, so the suite builds it the same way. That the build
+ * succeeds here is the proof that what travels is enough.
+ */
+const wamArgsOf = (result) => {
+  const args = result.body?.result?.attributes?.wamArgs;
+  if (!args) return args;
+  return {
+    ...args,
+    items: buildChecklist({
+      arrivalDate: args.arrivalDate,
+      semesterStart: args.semesterStart,
+      completed: args.completed ?? [],
+      booked: args.booked ?? {},
+      today: args.today,
+      profile: {
+        isInternational: args.isInternational,
+        living: args.living,
+        university: args.university,
+        semester: args.semester,
+      },
+    }),
+  };
+};
 const idsOf = (items) => items.map((item) => item.id);
 
 const passed = [];

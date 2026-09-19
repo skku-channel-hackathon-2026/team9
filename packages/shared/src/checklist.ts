@@ -1531,8 +1531,19 @@ export const RequirementStateSchema = z.object({
 });
 
 /** Everything the WAM needs to render the checklist without another call. */
+/**
+ * What the host hands the panel.
+ *
+ * Desk passes these in the WAM's own URL, so every field is spent on a query
+ * string. The computed rows used to travel here and came to 28KB encoded at
+ * twenty-five requirements, which is past a proxy's URI limit — the panel got
+ * "414 Request-URI Too Large" instead of loading. The deadline rules are
+ * compiled into the panel's bundle, so only the stored answers travel and it
+ * calls buildChecklist itself.
+ */
 export const ChecklistWamArgsSchema = z.object({
-  items: z.array(RequirementStateSchema),
+  completed: z.array(z.string()).default([]),
+  booked: z.record(z.string()).default({}),
   arrivalDate: z.string(),
   semesterStart: z.string(),
   today: z.string(),
@@ -1563,7 +1574,10 @@ export const ChecklistWamArgsSchema = z.object({
   view: z.enum(["brief", "calendar"]).default("brief"),
 });
 
-export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;
+export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema> & {
+  /** Built in the panel from the fields above, never sent over the wire. */
+  items: RequirementState[];
+};
 
 /**
  * Progress sent through the command's existing free-form `input` field. That

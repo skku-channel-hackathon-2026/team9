@@ -50,8 +50,11 @@ export const UI = {
     ko: '학교가 보내는 모든 공지가 아니라, 내 상황에 맞는 것만 보여줍니다.',
   },
   why: { en: 'Why', ko: '왜' },
-  bring: { en: 'Bring', ko: '준비물' },
-  where: { en: 'Where', ko: '장소' },
+  bring: { en: 'Bring', ko: '무엇을' },
+  where: { en: 'Where', ko: '어디로' },
+  feeLabel: { en: 'Cost', ko: '얼마를' },
+  dueLabel: { en: 'By', ko: '언제까지' },
+  basisLabel: { en: 'If missed', ko: '미이행 시' },
   missed: {
     en: 'You can still fix this',
     ko: '지금 하면 돼요',

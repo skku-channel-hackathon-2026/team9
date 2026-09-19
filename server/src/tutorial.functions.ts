@@ -306,16 +306,13 @@ export class TutorialFunctions {
         name: TUTORIAL_WAM_NAME,
         wamArgs: {
           ...tutorialArgs,
-          items: buildChecklist({
-            ...progress,
-            today,
-            profile: {
-              isInternational: progress.isInternational,
-              living: progress.living,
-              university: progress.university,
-              semester: progress.semester,
-            },
-          }),
+          // The panel builds the checklist itself from these fields. Desk
+          // passes wamArgs in the WAM's URL, and twenty-five computed rows
+          // came to 28KB once encoded — past every proxy's URI limit, which
+          // is what "414 Request-URI Too Large" was. The rules are compiled
+          // into the panel's own bundle, so only the answers travel.
+          booked: progress.booked ?? {},
+          completed: progress.completed,
           arrivalDate: progress.arrivalDate,
           isInternational: progress.isInternational,
           living: progress.living,

@@ -275,3 +275,8 @@
   width: 16px;
   text-align: right;
 }
+
+/* The counter card's label column. One width, so the values form an edge. */
+.skku-cell {
+  width: 56px;
+}
