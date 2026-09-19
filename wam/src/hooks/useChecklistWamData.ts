@@ -18,6 +18,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const arrivalDate = useWamData('arrivalDate')
   const semesterStart = useWamData('semesterStart')
   const today = useWamData('today')
+  const isNew = useWamData('isNew')
   const canSave = useWamData('canSave')
 
   return useMemo(() => {
@@ -26,6 +27,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       arrivalDate,
       semesterStart,
       today,
+      isNew,
       canSave,
     })
 
@@ -33,10 +35,17 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       return { data: parsed.data, appId: appId ?? '', error: null }
     }
 
+    if (import.meta.env.DEV) {
+      console.error(
+        '[checklist] wamArgs failed validation',
+        JSON.stringify(parsed.error.issues)
+      )
+    }
+
     return {
       data: null,
       appId: appId ?? '',
       error: new Error('The host did not provide a usable checklist.'),
     }
-  }, [appId, arrivalDate, canSave, items, semesterStart, today])
+  }, [appId, arrivalDate, canSave, isNew, items, semesterStart, today])
 }

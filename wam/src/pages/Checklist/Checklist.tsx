@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
+  buildChecklist,
   CHECKLIST_FUNCTIONS,
   type RequirementState,
   type SaveProgressInput,
 } from '@tutorial/shared'
 import {
   Badge,
+  Box,
+  Button,
   Checkbox,
   Divider,
   HStack,
@@ -33,25 +36,37 @@ const STATUS_VARIANT = {
   done: 'green',
 } as const
 
+const DATE_INPUT_STYLE = {
+  width: '100%',
+  padding: '8px 10px',
+  borderRadius: 6,
+  border: '1px solid var(--bezier-color-bg-black-lighter)',
+  background: 'transparent',
+  color: 'inherit',
+  font: 'inherit',
+}
+
 function dueLabel(item: RequirementState): string {
   if (item.status === 'done') {
-    return '완료'
+    return 'Done'
   }
   if (item.daysLeft < 0) {
-    return `${Math.abs(item.daysLeft)}일 지남`
+    return `${Math.abs(item.daysLeft)} days overdue`
   }
   if (item.daysLeft === 0) {
-    return '오늘까지'
+    return 'Due today'
   }
-  return `${item.daysLeft}일 남음`
+  return `${item.daysLeft} days left`
 }
 
 function Checklist() {
   const { setSize } = useWamSize()
   const { data, appId, error } = useChecklistWamData()
+  const [arrivalDate, setArrivalDate] = useState('')
   const [completed, setCompleted] = useState<string[]>([])
+  const [asking, setAsking] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
-  const [ready, setReady] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   const { call: saveProgress } = useCallFunction<{ saved: boolean }>({
     appId,
@@ -59,52 +74,118 @@ function Checklist() {
   })
 
   useEffect(() => {
-    setSize({ width: 420, height: 560 })
+    setSize({ width: 420, height: 580 })
   }, [setSize])
 
   useEffect(() => {
-    if (data && !ready) {
+    if (data && !hydrated) {
+      setArrivalDate(data.arrivalDate)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
-      setReady(true)
+      setAsking(data.isNew)
+      setHydrated(true)
     }
-  }, [data, ready])
+  }, [data, hydrated])
 
-  const items = useMemo(() => data?.items ?? [], [data])
-  const outstanding = items.filter((item) => !completed.includes(item.id))
-  const next = outstanding[0]
-  const doneCount = items.length - outstanding.length
+  // Recomputed here rather than fetched, so changing the date is instant.
+  const items = useMemo(
+    () =>
+      data
+        ? buildChecklist({
+            arrivalDate,
+            semesterStart: data.semesterStart,
+            completed,
+            today: data.today,
+          })
+        : [],
+    [arrivalDate, completed, data]
+  )
 
-  const toggle = useCallback(
-    (id: string) => async (checked: boolean) => {
-      const nextCompleted = checked
-        ? [...completed, id]
-        : completed.filter((each) => each !== id)
-      setCompleted(nextCompleted)
+  const persist = useCallback(
+    async (nextCompleted: string[], nextArrival: string) => {
       if (!data?.canSave) {
         setSaveFailed(true)
         return
       }
       try {
-        const input: SaveProgressInput = { completed: nextCompleted }
+        const input: SaveProgressInput = {
+          completed: nextCompleted,
+          arrivalDate: nextArrival,
+        }
         await saveProgress(input)
         setSaveFailed(false)
       } catch {
         setSaveFailed(true)
       }
     },
-    [completed, data, saveProgress]
+    [data, saveProgress]
   )
+
+  const toggle = useCallback(
+    (id: string) => (checked: boolean) => {
+      const next = checked
+        ? [...completed, id]
+        : completed.filter((each) => each !== id)
+      setCompleted(next)
+      void persist(next, arrivalDate)
+    },
+    [arrivalDate, completed, persist]
+  )
+
+  const confirmArrival = useCallback(() => {
+    setAsking(false)
+    void persist(completed, arrivalDate)
+  }, [arrivalDate, completed, persist])
 
   if (error || !data) {
     return (
       <InlineBanner
         variant="error"
-        content={error?.message ?? '체크리스트를 불러오지 못했습니다.'}
+        content={error?.message ?? 'Could not load the checklist.'}
       />
     )
   }
+
+  if (asking) {
+    return (
+      <VStack spacing={12}>
+        <VStack spacing={4}>
+          <Text
+            typo="15"
+            bold
+            color="text-neutral"
+          >
+            When did you arrive in Korea?
+          </Text>
+          <Text
+            typo="13"
+            color="text-neutral-lighter"
+          >
+            Every deadline is counted from this date, so it has to be yours.
+          </Text>
+        </VStack>
+        <input
+          type="date"
+          value={arrivalDate}
+          max={data.today}
+          onChange={(event) => setArrivalDate(event.target.value)}
+          style={DATE_INPUT_STYLE}
+        />
+        <Button
+          variant="filled"
+          semantic="primary"
+          label="Show my checklist"
+          disabled={!arrivalDate}
+          onClick={confirmArrival}
+        />
+      </VStack>
+    )
+  }
+
+  const outstanding = items.filter((item) => item.status !== 'done')
+  const next = outstanding[0]
+  const doneCount = items.length - outstanding.length
 
   return (
     <VStack spacing={12}>
@@ -113,11 +194,12 @@ function Checklist() {
           typo="13"
           color="text-neutral-lighter"
         >
-          {next ? '다음에 해야 할 일' : '지금 처리할 항목이 없습니다'}
+          {next ? 'Next up' : 'Nothing outstanding'}
         </Text>
         {next && (
           <HStack
-            align="center"
+            align="start"
+            justify="between"
             spacing={8}
           >
             <Text
@@ -125,160 +207,180 @@ function Checklist() {
               bold
               color="text-neutral"
             >
-              {next.titleKo}
+              {next.title}
             </Text>
-            <Badge
-              size="xs"
-              variant={STATUS_VARIANT[next.status]}
-            >
-              {dueLabel(next)}
-            </Badge>
+            <Box shrink={0}>
+              <Badge
+                size="xs"
+                variant={STATUS_VARIANT[next.status]}
+              >
+                {dueLabel(next)}
+              </Badge>
+            </Box>
           </HStack>
         )}
         <ProgressBar
           value={items.length === 0 ? 0 : doneCount / items.length}
           width="100%"
         />
-        <Text
-          typo="12"
-          color="text-neutral-lighter"
+        <HStack
+          align="center"
+          justify="between"
+          spacing={6}
         >
-          {`${doneCount} / ${items.length} 완료 · 기준일 ${data.today}`}
-        </Text>
+          <Text
+            typo="12"
+            color="text-neutral-lighter"
+          >
+            {`${doneCount} of ${items.length} done · arrived ${arrivalDate}`}
+          </Text>
+          <Box shrink={0}>
+            <Button
+              variant="ghost"
+              semantic="secondary"
+              size="xs"
+              label="Change date"
+              onClick={() => setAsking(true)}
+            />
+          </Box>
+        </HStack>
       </VStack>
 
       {saveFailed && (
         <InlineBanner
           variant="error"
-          content="저장하지 못했습니다. 화면에는 반영되지만 다시 열면 사라집니다."
+          content="Couldn’t save. The change shows here but won’t survive reopening."
         />
       )}
 
       <VStack spacing={0}>
-        {items.map((item, index) => {
-          const isDone = completed.includes(item.id)
-          return (
-            <VStack
-              key={item.id}
-              spacing={0}
+        {items.map((item, index) => (
+          <VStack
+            key={item.id}
+            spacing={0}
+          >
+            {index > 0 && <Divider withoutSideIndent />}
+            <HStack
+              align="start"
+              spacing={8}
+              paddingVertical={10}
             >
-              {index > 0 && <Divider withoutSideIndent />}
-              <HStack
-                align="start"
-                spacing={8}
-                paddingVertical={10}
+              <Checkbox
+                checked={item.status === 'done'}
+                onCheckedChange={toggle(item.id)}
+              />
+              <VStack
+                spacing={4}
+                grow={1}
               >
-                <Checkbox
-                  checked={isDone}
-                  onCheckedChange={toggle(item.id)}
-                />
-                <VStack
-                  spacing={4}
-                  grow={1}
+                <HStack
+                  align="start"
+                  justify="between"
+                  spacing={6}
                 >
-                  <HStack
-                    align="center"
-                    justify="between"
-                    spacing={6}
+                  <Text
+                    typo="14"
+                    bold
+                    color={
+                      item.status === 'done'
+                        ? 'text-neutral-lighter'
+                        : 'text-neutral'
+                    }
                   >
-                    <Text
-                      typo="14"
-                      bold
-                      color={isDone ? 'text-neutral-lighter' : 'text-neutral'}
-                    >
-                      {item.titleKo}
-                    </Text>
+                    {item.title}
+                  </Text>
+                  <Box shrink={0}>
                     <Badge
                       size="xs"
-                      variant={STATUS_VARIANT[isDone ? 'done' : item.status]}
+                      variant={STATUS_VARIANT[item.status]}
                     >
-                      {isDone ? '완료' : dueLabel(item)}
+                      {dueLabel(item)}
                     </Badge>
-                  </HStack>
+                  </Box>
+                </HStack>
 
-                  <HStack
+                <HStack
+                  as="span"
+                  align="center"
+                  spacing={4}
+                >
+                  <Icon
+                    source={ClockIcon}
+                    size="12"
+                    color="icon-neutral"
+                  />
+                  <Text
                     as="span"
-                    align="center"
-                    spacing={4}
+                    typo="12"
+                    color="text-neutral-lighter"
                   >
-                    <Icon
-                      source={ClockIcon}
-                      size="12"
-                      color="icon-neutral"
-                    />
-                    <Text
-                      as="span"
-                      typo="12"
-                      color="text-neutral-lighter"
+                    {`by ${item.dueDate}`}
+                  </Text>
+                  {item.national && (
+                    <Badge
+                      size="xs"
+                      variant="blue"
                     >
-                      {`${item.dueDate}까지`}
-                    </Text>
-                    {item.national && (
-                      <Badge
-                        size="xs"
-                        variant="blue"
-                      >
-                        법정 기한
-                      </Badge>
-                    )}
-                  </HStack>
+                      Legal deadline
+                    </Badge>
+                  )}
+                </HStack>
 
-                  <HStack
+                <HStack
+                  as="span"
+                  align="center"
+                  spacing={4}
+                >
+                  <Icon
+                    source={MapPinIcon}
+                    size="12"
+                    color="icon-neutral"
+                  />
+                  <Text
                     as="span"
-                    align="center"
-                    spacing={4}
+                    typo="12"
+                    color="text-neutral-lighter"
                   >
-                    <Icon
-                      source={MapPinIcon}
-                      size="12"
-                      color="icon-neutral"
-                    />
-                    <Text
-                      as="span"
-                      typo="12"
-                      color="text-neutral-lighter"
-                    >
-                      {item.fee ? `${item.where} · ${item.fee}` : item.where}
-                    </Text>
-                  </HStack>
+                    {item.fee ? `${item.where} · ${item.fee}` : item.where}
+                  </Text>
+                </HStack>
 
-                  <HStack
+                <HStack
+                  as="span"
+                  align="start"
+                  spacing={4}
+                >
+                  <Icon
+                    source={DocumentIcon}
+                    size="12"
+                    color="icon-neutral"
+                  />
+                  <Text
                     as="span"
-                    align="start"
-                    spacing={4}
+                    typo="12"
+                    color="text-neutral-lighter"
                   >
-                    <Icon
-                      source={DocumentIcon}
-                      size="12"
-                      color="icon-neutral"
-                    />
-                    <Text
-                      as="span"
-                      typo="12"
-                      color="text-neutral-lighter"
-                    >
-                      {item.bring.join(', ')}
-                    </Text>
-                  </HStack>
+                    {item.bring.join(', ')}
+                  </Text>
+                </HStack>
 
-                  <a
-                    href={item.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                <a
+                  href={item.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Text
+                    as="span"
+                    typo="12"
+                    color="text-accent-blue"
                   >
-                    <Text
-                      as="span"
-                      typo="12"
-                      color="text-accent-blue"
-                    >
-                      출처 확인
-                    </Text>
-                  </a>
-                </VStack>
-              </HStack>
-            </VStack>
-          )
-        })}
+                    View source
+                  </Text>
+                </a>
+              </VStack>
+            </HStack>
+          </VStack>
+        ))}
       </VStack>
 
       {items.length === 0 && (
@@ -295,7 +397,7 @@ function Checklist() {
             typo="13"
             color="text-neutral-lighter"
           >
-            표시할 항목이 없습니다.
+            Nothing to show.
           </Text>
         </HStack>
       )}

@@ -15,7 +15,7 @@ function App() {
     <WamThemeProvider>
       <HeightSynchronizer maxHeight={640}>
         <WamHeader
-          title="신입생 체크리스트"
+          title="Freshman Checklist"
           onClose={close}
         />
         <div style={{ padding: isMobile() ? '0 16px 16px' : '0 24px 24px' }}>

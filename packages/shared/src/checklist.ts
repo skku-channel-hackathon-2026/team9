@@ -247,6 +247,8 @@ export const ChecklistWamArgsSchema = z.object({
   arrivalDate: z.string(),
   semesterStart: z.string(),
   today: z.string(),
+  /** True until this person has saved anything, so the UI can ask their date. */
+  isNew: z.boolean(),
   /** False when D1 is unavailable, so the UI can explain why ticks won't stick. */
   canSave: z.boolean(),
 });

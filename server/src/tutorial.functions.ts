@@ -61,15 +61,21 @@ function recordIdFor(ctx: Context): string {
   return progressRecordId(ctx.channel.id, ctx.caller.type, ctx.caller.id ?? "");
 }
 
-/** Stored progress, or sensible defaults the first time someone opens this. */
+/**
+ * Stored progress, plus whether this person has ever saved anything. Every
+ * deadline is counted from their arrival date, so a first-time reader is asked
+ * for it rather than being shown a list built on a guess.
+ */
 async function loadProgress(
   ctx: Context,
   today: string,
-): Promise<StoredProgress> {
+): Promise<{ progress: StoredProgress; isNew: boolean }> {
   const parsed = StoredProgressSchema.safeParse(
     await readRecord(recordIdFor(ctx)),
   );
-  return parsed.success ? parsed.data : defaultProgress(today);
+  return parsed.success
+    ? { progress: parsed.data, isNew: false }
+    : { progress: defaultProgress(today), isNew: true };
 }
 
 @Extension({ name: "command", systemVersion: "v1" })
@@ -148,7 +154,7 @@ export class TutorialFunctions {
     } satisfies TutorialWamArgs;
 
     const today = todayInSeoul();
-    const progress = await loadProgress(ctx, today);
+    const { progress, isNew } = await loadProgress(ctx, today);
 
     return {
       type: "wam",
@@ -161,6 +167,7 @@ export class TutorialFunctions {
           arrivalDate: progress.arrivalDate,
           semesterStart: progress.semesterStart,
           today,
+          isNew,
           canSave: hasDatabase(),
         },
       },
@@ -233,7 +240,7 @@ export class TutorialFunctions {
       );
     }
 
-    const current = await loadProgress(ctx, todayInSeoul());
+    const { progress: current } = await loadProgress(ctx, todayInSeoul());
     const next: StoredProgress = {
       arrivalDate: input.arrivalDate ?? current.arrivalDate,
       semesterStart: current.semesterStart,
