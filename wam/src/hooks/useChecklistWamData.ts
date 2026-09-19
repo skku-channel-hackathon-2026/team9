@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
 import { useTypedWamData, useWamData } from '@channel.io/app-sdk-wam'
-import { ChecklistWamArgsSchema, type ChecklistWamArgs } from '@tutorial/shared'
+import {
+  buildChecklist,
+  ChecklistWamArgsSchema,
+  type ChecklistWamArgs,
+} from '@tutorial/shared'
 
 export interface ChecklistWamDataResult {
   data: ChecklistWamArgs | null
@@ -9,12 +13,21 @@ export interface ChecklistWamDataResult {
 }
 
 /**
- * The host hands the whole checklist over in wamArgs, so the first paint needs
- * no round trip. Values arrive untyped, so parse before trusting them.
+ * The host hands over the student's answers, and the panel builds the
+ * checklist from them.
+ *
+ * Desk passes wamArgs in the WAM's own URL, so everything here is spent on a
+ * query string: twenty-five computed rows came to 28KB encoded and the panel
+ * stopped loading with "414 Request-URI Too Large". The deadline rules are
+ * compiled into this bundle already, so only the seven stored answers travel
+ * and `buildChecklist` does the rest here.
+ *
+ * Values arrive untyped, so parse before trusting them.
  */
 export function useChecklistWamData(): ChecklistWamDataResult {
   const appId = useTypedWamData('appId')
-  const items = useWamData('items')
+  const completed = useWamData('completed')
+  const booked = useWamData('booked')
   const arrivalDate = useWamData('arrivalDate')
   const semesterStart = useWamData('semesterStart')
   const today = useWamData('today')
@@ -30,7 +43,8 @@ export function useChecklistWamData(): ChecklistWamDataResult {
 
   return useMemo(() => {
     const parsed = ChecklistWamArgsSchema.safeParse({
-      items,
+      completed,
+      booked,
       arrivalDate,
       semesterStart,
       today,
@@ -46,7 +60,27 @@ export function useChecklistWamData(): ChecklistWamDataResult {
     })
 
     if (parsed.success) {
-      return { data: parsed.data, appId: appId ?? '', error: null }
+      const profile = {
+        isInternational: parsed.data.isInternational,
+        living: parsed.data.living,
+        university: parsed.data.university,
+        semester: parsed.data.semester,
+      }
+      return {
+        data: {
+          ...parsed.data,
+          items: buildChecklist({
+            arrivalDate: parsed.data.arrivalDate,
+            semesterStart: parsed.data.semesterStart,
+            completed: parsed.data.completed,
+            booked: parsed.data.booked,
+            today: parsed.data.today,
+            profile,
+          }),
+        },
+        appId: appId ?? '',
+        error: null,
+      }
     }
 
     if (import.meta.env.DEV) {
@@ -67,7 +101,8 @@ export function useChecklistWamData(): ChecklistWamDataResult {
     canSave,
     isInternational,
     isNew,
-    items,
+    booked,
+    completed,
     living,
     name,
     semester,

@@ -18,6 +18,7 @@
   /* The navy's own lightness and chroma rotated to red: it carries the weight
      of the brand rather than reading as a stock alarm colour. */
   --skku-late: #a4123a;
+  --skku-counter: #f1f1f2;
 
   --skku-rail: 72px;
   --skku-hairline: var(--color-border-neutral);
@@ -32,6 +33,12 @@
   --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
   --color-fill-accent-green-heavier: var(--skku-green);
   --color-fill-accent-green-heavier-hovered: var(--skku-green-hover);
+
+  /* A checked Checkbox resolves its fill through the BLUE accent, not the
+     green one, so the most repeated object in the panel was shipping in
+     Bezier's blue while everything around it was the university's green. */
+  --color-fill-accent-blue-heavier: var(--skku-green);
+  --color-fill-accent-blue-heavier-hovered: var(--skku-green-hover);
 }
 
 /*
@@ -45,6 +52,7 @@
   --skku-blue: #4d7ee0;
   --skku-blue-hover: #5c8ae8;
   --skku-late: #f07a93;
+  --skku-counter: #232427;
 
   --color-text-inverse: #ffffff;
   --color-icon-inverse-heavier: #ffffff;
@@ -200,4 +208,75 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * The sentence. The panel opens by saying where the student stands, because
+ * that is the only thing they came to find out. Its underline is the progress
+ * run, so progress is a property of the statement rather than a band above a
+ * list.
+ */
+.skku-say {
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.skku-run {
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+  height: 3px;
+}
+
+.skku-seg {
+  flex: 1 1 0;
+  border-radius: 999px;
+  background-color: var(--color-border-neutral);
+}
+
+.skku-seg-done {
+  background-color: var(--skku-green);
+}
+
+.skku-seg-late {
+  background-color: var(--skku-late);
+}
+
+/*
+ * The counter card. The one thing in the panel meant to leave it: a student
+ * holds this up at the window, so it is sized to be read across a desk and
+ * selectable to be screenshotted.
+ */
+.skku-counter {
+  user-select: text;
+  background-color: var(--skku-counter);
+  border-radius: 10px;
+}
+
+.skku-ruled + .skku-ruled {
+  border-top: 1px solid var(--color-border-neutral);
+}
+
+/* What the student said: their own words, set apart without a speech bubble. */
+.skku-said {
+  max-width: 80%;
+  padding: 8px 12px;
+  background-color: var(--skku-counter);
+  border-radius: 14px 14px 4px 14px;
+}
+
+/* The answer hangs off one green rule rather than sitting in a box. */
+.skku-answer {
+  border-left: 2px solid var(--skku-green);
+}
+
+/* Step numbers line up in their own narrow column. */
+.skku-step {
+  width: 16px;
+  text-align: right;
+}
+
+/* The counter card's label column. One width, so the values form an edge. */
+.skku-cell {
+  width: 56px;
 }

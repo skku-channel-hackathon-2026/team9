@@ -4,7 +4,7 @@ import {
   buildChecklist,
   composeAlfQuestion,
   composeGuideAnswer,
-  findGuide,
+  findGuideFor,
   sourcesFor,
   suggestedQuestions,
   ASSISTANT_FUNCTIONS,
@@ -306,16 +306,13 @@ export class TutorialFunctions {
         name: TUTORIAL_WAM_NAME,
         wamArgs: {
           ...tutorialArgs,
-          items: buildChecklist({
-            ...progress,
-            today,
-            profile: {
-              isInternational: progress.isInternational,
-              living: progress.living,
-              university: progress.university,
-              semester: progress.semester,
-            },
-          }),
+          // The panel builds the checklist itself from these fields. Desk
+          // passes wamArgs in the WAM's URL, and twenty-five computed rows
+          // came to 28KB once encoded — past every proxy's URI limit, which
+          // is what "414 Request-URI Too Large" was. The rules are compiled
+          // into the panel's own bundle, so only the answers travel.
+          booked: progress.booked ?? {},
+          completed: progress.completed,
           arrivalDate: progress.arrivalDate,
           isInternational: progress.isInternational,
           living: progress.living,
@@ -561,11 +558,7 @@ export class TutorialFunctions {
       : null;
     // The row the question was asked from is part of the question, so the
     // guide is matched against both rather than the typed words alone.
-    const guide = findGuide(
-      item
-        ? `${input.question} ${item.title} ${item.officialKo}`
-        : input.question,
-    );
+    const guide = findGuideFor(input.question, item);
 
     const askedInChat = input.targetToken
       ? await this.tryPostToChat(
@@ -648,6 +641,7 @@ export class TutorialFunctions {
       arrivalDate: input.arrivalDate ?? current.arrivalDate,
       semesterStart: current.semesterStart,
       completed: Array.from(new Set(input.completed)),
+      booked: current.booked ?? {},
       isInternational: input.isInternational ?? current.isInternational,
       living: current.living,
       university: current.university,
@@ -662,6 +656,6 @@ export class TutorialFunctions {
       );
     }
 
-    return { saved: true, completed: next.completed };
+    return { saved: true, completed: next.completed, booked: next.booked };
   }
 }

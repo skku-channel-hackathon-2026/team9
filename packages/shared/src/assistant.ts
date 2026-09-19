@@ -203,9 +203,10 @@ export const GUIDES: Guide[] = [
       "part time",
       "parttime",
       "arbeit",
-      "earn",
-      "money",
+      "earn money",
       "salary",
+      "work permit",
+      "can i work",
       "employment",
       "아르바이트",
       "알바",
@@ -272,6 +273,11 @@ export const GUIDES: Guide[] = [
       "lost",
       "lose",
       "stolen",
+      "alien registration",
+      "get my arc",
+      "get an arc",
+      "apply for arc",
+      "외국인등록",
       "damaged",
       "broken",
       "replace",
@@ -438,14 +444,15 @@ export const GUIDES: Guide[] = [
     officialKo: "은행 계좌 개설",
     keywords: [
       "bank",
-      "account",
-      "card",
-      "money",
-      "transfer",
-      "phone",
+      "bank account",
+      "open an account",
+      "debit card",
+      "check card",
+      "transfer money",
+      "phone plan",
+      "phone number",
+      "mobile plan",
       "sim",
-      "number",
-      "mobile",
       "은행",
       "계좌",
       "체크카드",
@@ -494,6 +501,25 @@ export function guideById(id: string): Guide | undefined {
  * decides which written text is put in front of the model, and what the panel
  * falls back to when there is no model to call.
  */
+/**
+ * The guide for a question, widened by the row only when the question alone
+ * says nothing.
+ *
+ * Matching the question and the row's title together let the row's words win:
+ * "how do I get my ARC" asked from the ARC row matched the bank account guide,
+ * because that guide's own text is about waiting for an ARC. The question is
+ * what the student asked, so it is tried on its own first.
+ */
+export function findGuideFor(
+  question: string,
+  item: { title: string; officialKo: string } | null,
+): Guide | null {
+  return (
+    findGuide(question) ??
+    (item ? findGuide(`${question} ${item.title} ${item.officialKo}`) : null)
+  );
+}
+
 export function findGuide(question: string): Guide | null {
   const text = question.toLowerCase();
   let best: { guide: Guide; score: number } | null = null;
@@ -617,6 +643,18 @@ export function suggestedQuestions(
  * checklist that makes it answerable, and the source, so whoever replies,
  * ALF or a person, is working from the same page the student is.
  */
+/**
+ * The question, as a message ALF can actually answer.
+ *
+ * ALF has no access to this app's data and no idea who is asking, so a bare
+ * question gets a bare, general answer — which is what made the assistant feel
+ * like a search engine. Everything it needs therefore travels with the
+ * question: who this student is, what they have outstanding, the official
+ * facts for the procedure they are asking about, and how to answer.
+ *
+ * There is no API to read a reply back, so the answer stays in the chat. That
+ * is the right place for it: the student can keep talking there.
+ */
 export function composeAlfQuestion(input: {
   question: string;
   /** The row the question was asked from, when there was one. */
@@ -632,17 +670,6 @@ export function composeAlfQuestion(input: {
   const { item, guide, items, profile, language } = input;
   const ko = language === "ko";
 
-  const outstanding = items
-    .filter((candidate) => candidate.status !== "done")
-    .slice(0, 3);
-
-  const lines: string[] = [`❓ ${input.question.trim()}`, ""];
-
-  lines.push(
-    ko
-      ? `내 상황 (${input.today} 기준)`
-      : `My situation (as of ${input.today})`,
-  );
   const semester = ko
     ? { first: "1학기", second: "2학기", later: "3학기 이상" }[profile.semester]
     : {
@@ -650,12 +677,6 @@ export function composeAlfQuestion(input: {
         second: "second semester",
         later: "later in the degree",
       }[profile.semester];
-
-  lines.push(
-    ko
-      ? `• ${profile.isInternational ? "외국인 유학생" : "국내 학생"} · ${profile.living === "dorm" ? "기숙사" : "통학"} · ${semester}`
-      : `• ${profile.isInternational ? "International student" : "Domestic student"} · ${profile.living === "dorm" ? "dormitory" : "commuting"} · ${semester}`,
-  );
 
   const timing = (state: RequirementState): string =>
     state.daysLeft < 0
@@ -666,20 +687,54 @@ export function composeAlfQuestion(input: {
         ? `${state.daysLeft}일 남음`
         : `${state.daysLeft} days left`;
 
+  const lines: string[] = [`❓ ${input.question.trim()}`, ""];
+
+  lines.push(
+    ko ? `학생 (${input.today} 기준)` : `The student (as of ${input.today})`,
+    ko
+      ? `• ${profile.isInternational ? "외국인 유학생" : "국내 학생"} · ${profile.living === "dorm" ? "기숙사" : "통학"} · ${semester}`
+      : `• ${profile.isInternational ? "International student" : "Domestic student"} · ${profile.living === "dorm" ? "dormitory" : "commuting"} · ${semester}`,
+  );
+
+  const outstanding = items
+    .filter((candidate) => candidate.status !== "done")
+    .slice(0, 5);
+  if (outstanding.length > 0) {
+    lines.push("", ko ? "아직 남은 항목" : "Still outstanding");
+    for (const state of outstanding) {
+      lines.push(
+        `• ${state.officialKo} (${state.title}) — ${state.dueDate}, ${timing(state)}`,
+      );
+    }
+  }
+
+  // The official facts, in full. ALF answers from these rather than from
+  // whatever it happens to know about Korean immigration in general.
   if (item) {
     lines.push(
+      "",
       ko
-        ? `• ${item.title} (${item.officialKo}) — 마감 ${item.dueDate}, ${timing(item)}`
-        : `• ${item.title} (${item.officialKo}) — due ${item.dueDate}, ${timing(item)}`,
+        ? `공식 정보 — ${item.officialKo} (${item.title})`
+        : `Official facts — ${item.officialKo} (${item.title})`,
+      ko
+        ? `• 기한: ${item.dueDate} (${timing(item)})`
+        : `• Due: ${item.dueDate} (${timing(item)})`,
+      ko ? `• 장소: ${item.where}` : `• Where: ${item.where}`,
       ko
         ? `• 준비물: ${item.bring.join(", ")}`
         : `• Bring: ${item.bring.join(", ")}`,
-      ko ? `• 장소: ${item.where}` : `• Where: ${item.where}`,
     );
-  } else {
-    for (const state of outstanding) {
+    if (item.fee)
+      lines.push(ko ? `• 비용: ${item.fee}` : `• Cost: ${item.fee}`);
+    if (item.penalty) {
       lines.push(
-        `• ${state.title} (${state.officialKo}) — ${state.dueDate}, ${timing(state)}`,
+        ko ? `• 미이행 시: ${item.penalty}` : `• If missed: ${item.penalty}`,
+      );
+    }
+    if (item.recovery.length > 0) {
+      lines.push(
+        ko ? `• 지금 할 수 있는 것:` : `• What can still be done:`,
+        ...item.recovery.map((step) => `   - ${step}`),
       );
     }
   }
@@ -688,14 +743,42 @@ export function composeAlfQuestion(input: {
     lines.push(
       "",
       ko
-        ? `관련 절차: ${pick(guide.title, "ko")} (${guide.officialKo})`
-        : `Related procedure: ${pick(guide.title, "en")} (${guide.officialKo})`,
-      pick(guide.timing, language),
+        ? `공식 절차 — ${pick(guide.title, "ko")} (${guide.officialKo})`
+        : `Official procedure — ${pick(guide.title, "en")} (${guide.officialKo})`,
+      pick(guide.summary, language),
+      ko
+        ? `• 시기: ${pick(guide.timing, language)}`
+        : `• When: ${pick(guide.timing, language)}`,
+      ko
+        ? `• 장소: ${pick(guide.where, language)}`
+        : `• Where: ${pick(guide.where, language)}`,
+      ...pickList(guide.steps, language).map(
+        (step, index) => `   ${index + 1}. ${step}`,
+      ),
+      ko
+        ? `• 준비물: ${pickList(guide.bring, language).join(", ")}`
+        : `• Bring: ${pickList(guide.bring, language).join(", ")}`,
     );
+    if (guide.fee) {
+      lines.push(
+        ko
+          ? `• 비용: ${pick(guide.fee, language)}`
+          : `• Cost: ${pick(guide.fee, language)}`,
+      );
+    }
   }
 
   const source = item?.sourceUrl ?? guide?.sourceUrl ?? HELP.hikorea;
   lines.push("", ko ? `출처: ${source}` : `Source: ${source}`);
+
+  // Without this the answer drifts into general advice about Korea. With it,
+  // ALF stays on this student's dates and says so when it does not know.
+  lines.push(
+    "",
+    ko
+      ? "답변 방법: 위 정보만 사용해 한국어로 3~6문장으로 답해 주세요. 이 학생의 날짜를 기준으로 구체적으로 설명하고, 창구에서 말할 한국어 용어를 알려 주세요. 위에 없는 내용은 모른다고 말하고 1345 (외국인종합안내센터)로 안내해 주세요."
+      : "How to answer: use only the facts above, in English, in 3–6 sentences. Be specific to this student's dates. Give the Korean term to say at the counter. If the facts above do not cover it, say so and point to 1345 (Immigration Contact Centre).",
+  );
 
   return lines.join("\n");
 }

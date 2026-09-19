@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   Fragment,
   useCallback,
   useEffect,
@@ -12,7 +11,7 @@ import {
   buildChecklist,
   calendarUrl,
   composeGuideAnswer,
-  findGuide,
+  findGuideFor,
   HELP,
   sourcesFor,
   suggestedQuestions,
@@ -36,16 +35,14 @@ import {
   Divider,
   HStack,
   Icon,
+  IconButton,
+  Search,
   SegmentedControl,
   SegmentedControlItem,
   Text,
   VStack,
 } from '@channel.io/bezier-react/beta'
-import {
-  ChatBubbleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from '@channel.io/bezier-icons'
+import { CalendarIcon, ChatBubbleIcon } from '@channel.io/bezier-icons'
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
@@ -53,6 +50,34 @@ import Assistant from './Assistant'
 import Calendar from './Calendar'
 import './brand.css'
 import { t } from './strings'
+
+/**
+ * Where the list breaks. Sorted by date within each, so the panel still reads
+ * as a timeline — but the break between "past their date" and the rest is a
+ * section boundary rather than a rule drawn across the rows.
+ */
+const GROUPS = [
+  {
+    key: 'groupLate',
+    holds: (item: RequirementState) => item.status === 'overdue',
+  },
+  {
+    key: 'groupSoon',
+    holds: (item: RequirementState) =>
+      item.status !== 'overdue' &&
+      item.status !== 'done' &&
+      item.daysLeft <= 31,
+  },
+  {
+    key: 'groupLater',
+    holds: (item: RequirementState) =>
+      item.status !== 'overdue' && item.status !== 'done' && item.daysLeft > 31,
+  },
+  {
+    key: 'groupDone',
+    holds: (item: RequirementState) => item.status === 'done',
+  },
+] as const
 
 const CATEGORY = [
   { id: 'all', key: 'all', short: 'all' },
@@ -104,50 +129,18 @@ function shortDate(iso: string, language: Language): string {
   })
 }
 
-/**
- * The line the list is read against.
- *
- * Lateness is a position, not a badge: rows above this rule are behind, rows
- * below are ahead. It is the only saturated mark on the list, which is what
- * makes it register at all.
- */
-const TodayRule = forwardRef<
-  HTMLDivElement,
-  { language: Language; nothingLate: boolean }
->(function TodayRule({ language, nothingLate }, ref) {
-  const today = shortDate(new Date().toISOString().slice(0, 10), language)
-  const label =
-    language === 'ko'
-      ? `오늘 ${today}${nothingLate ? ' · 늦은 항목 없음' : ''}`
-      : `Today, ${today}${nothingLate ? ' · nothing late' : ''}`
-  return (
-    <Box
-      ref={ref}
-      className="skku-today"
-      paddingTop={8}
-      marginTop={8}
-      marginBottom={8}
-    >
-      <Text
-        typo="13"
-        bold
-        color="text-accent-red"
-      >
-        {label}
-      </Text>
-    </Box>
-  )
-})
-
 function Row({
   rowRef,
   item,
   language,
   onToggle,
   onAsk,
+  onAskThis,
   open,
   onOpen,
   late,
+  booked,
+  onBook,
 }: {
   rowRef: (node: HTMLDivElement | null) => void
   item: RequirementState
@@ -155,27 +148,18 @@ function Row({
   onToggle: (checked: boolean) => void
   /** Opens the question view with this row as its subject. */
   onAsk: () => void
+  /** Opens the question view already asking this. */
+  onAskThis: (question: string) => void
   /** Collapsed rows show only what is needed to decide whether to read on. */
   open: boolean
   onOpen: () => void
-  /** Above the today rule. Carried as weight as well as colour. */
+  /** Past its date. Carried as weight as well as colour. */
   late: boolean
+  /** ISO date an appointment is booked for, or '' for none. */
+  booked: string
+  onBook: (when: string) => void
 }) {
   const isDone = item.status === 'done'
-  const label = (key: 'why' | 'bring' | 'where') => (
-    <Box
-      shrink={0}
-      width={48}
-    >
-      <Text
-        typo="13"
-        bold
-        color="text-neutral-lighter"
-      >
-        {t(key, language)}
-      </Text>
-    </Box>
-  )
 
   return (
     <Box
@@ -228,6 +212,15 @@ function Row({
           >
             {item.officialKo}
           </Text>
+          {booked !== '' && !isDone && (
+            <Text
+              typo="12"
+              bold
+              color="text-accent-green"
+            >
+              {`${t('bookedFor', language)} ${shortDate(booked, language)}`}
+            </Text>
+          )}
           <Text
             typo="13"
             color="text-neutral-light"
@@ -254,58 +247,229 @@ function Row({
         </Box>
       </HStack>
 
+      {/*
+        The counter card. The one thing in the panel meant to leave it: a
+        student holds this up at the window, so it is set to be read across a
+        desk, selectable to be screenshotted, and it does nothing when tapped.
+      */}
       {open && (
         <Box
-          className="skku-note"
-          paddingLeft={12}
-          marginTop={10}
+          className="skku-counter"
+          padding={16}
+          marginTop={12}
           marginLeft={84}
         >
-          <VStack spacing={12}>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('why')}
+          <VStack spacing={14}>
+            <VStack spacing={2}>
               <Text
-                className="skku-prose"
-                typo="14"
+                typo="24"
+                bold
                 color="text-neutral"
               >
-                {item.why}
+                {item.officialKo}
               </Text>
-            </HStack>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('bring')}
-              <VStack spacing={4}>
-                {item.bring.map((each) => (
+              <Text
+                typo="15"
+                color="text-neutral-light"
+              >
+                {item.title}
+              </Text>
+            </VStack>
+
+            <VStack spacing={0}>
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
+              >
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('where', language)}
+                    </Text>
+                  </Box>
+                  <a
+                    href={item.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      color: 'var(--skku-blue)',
+                      fontWeight: 600,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    <Text
+                      as="span"
+                      typo="15"
+                      color="text-accent-blue"
+                    >
+                      {item.where}
+                    </Text>
+                  </a>
+                </HStack>
+              </Box>
+
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
+              >
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('bring', language)}
+                    </Text>
+                  </Box>
                   <Text
-                    key={each}
                     className="skku-prose"
-                    typo="14"
+                    typo="15"
                     color="text-neutral"
                   >
-                    {each}
+                    {item.bring.join(' · ')}
                   </Text>
-                ))}
-              </VStack>
-            </HStack>
-            <HStack
-              align="start"
-              spacing={8}
-            >
-              {label('where')}
-              <Text
-                className="skku-prose"
-                typo="14"
-                color="text-neutral"
+                </HStack>
+              </Box>
+
+              {item.fee && (
+                <Box
+                  className="skku-ruled"
+                  paddingVertical={10}
+                >
+                  <HStack
+                    align="start"
+                    spacing={12}
+                  >
+                    <Box
+                      className="skku-cell"
+                      shrink={0}
+                    >
+                      <Text
+                        typo="13"
+                        bold
+                        color="text-neutral-lighter"
+                      >
+                        {t('feeLabel', language)}
+                      </Text>
+                    </Box>
+                    <Text
+                      typo="15"
+                      color={
+                        /현금|cash/i.test(item.fee)
+                          ? 'text-accent-red'
+                          : 'text-neutral'
+                      }
+                    >
+                      {item.fee}
+                    </Text>
+                  </HStack>
+                </Box>
+              )}
+
+              <Box
+                className="skku-ruled"
+                paddingVertical={10}
               >
-                {item.fee ? `${item.where} · ${item.fee}` : item.where}
-              </Text>
-            </HStack>
+                <HStack
+                  align="start"
+                  spacing={12}
+                >
+                  <Box
+                    className="skku-cell"
+                    shrink={0}
+                  >
+                    <Text
+                      typo="13"
+                      bold
+                      color="text-neutral-lighter"
+                    >
+                      {t('dueLabel', language)}
+                    </Text>
+                  </Box>
+                  <Text
+                    className="skku-tabular"
+                    typo="15"
+                    bold
+                    color={late ? 'text-accent-red' : 'text-neutral'}
+                  >
+                    {shortDate(item.dueDate, language)}
+                  </Text>
+                </HStack>
+              </Box>
+
+              {item.penalty && (
+                <Box
+                  className="skku-ruled"
+                  paddingVertical={10}
+                >
+                  <HStack
+                    align="start"
+                    spacing={12}
+                  >
+                    <Box
+                      className="skku-cell"
+                      shrink={0}
+                    >
+                      <Text
+                        typo="13"
+                        bold
+                        color="text-neutral-lighter"
+                      >
+                        {t('basisLabel', language)}
+                      </Text>
+                    </Box>
+                    <Text
+                      className="skku-prose"
+                      typo="13"
+                      color="text-neutral-light"
+                    >
+                      {item.penalty}
+                    </Text>
+                  </HStack>
+                </Box>
+              )}
+            </VStack>
+          </VStack>
+        </Box>
+      )}
+
+      {open && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <VStack spacing={4}>
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('why', language)}
+            </Text>
+            <Text
+              className="skku-prose"
+              typo="14"
+              color="text-neutral"
+            >
+              {item.why}
+            </Text>
           </VStack>
         </Box>
       )}
@@ -344,6 +508,98 @@ function Row({
               </Text>
             )}
           </VStack>
+        </Box>
+      )}
+
+      {open && !isDone && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <HStack
+            align="center"
+            spacing={8}
+            wrap
+          >
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('bookLabel', language)}
+            </Text>
+            <input
+              type="date"
+              value={booked}
+              onChange={(event) => onBook(event.target.value)}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 6,
+                border: '1px solid var(--color-border-neutral)',
+                background: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                fontSize: 13,
+              }}
+            />
+          </HStack>
+        </Box>
+      )}
+
+      {/* A blank question box is a blank page. These are the questions this
+          row actually raises, so the assistant starts as something to browse
+          rather than something to compose. */}
+      {open && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <VStack spacing={6}>
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('relatedLabel', language)}
+            </Text>
+            <HStack
+              spacing={6}
+              wrap
+            >
+              {suggestedQuestions(language, item)
+                .slice(0, 3)
+                .map((question) => (
+                  <Button
+                    key={question}
+                    variant="outlined"
+                    semantic="secondary"
+                    size="xs"
+                    label={question}
+                    onClick={() => onAskThis(question)}
+                  />
+                ))}
+            </HStack>
+          </VStack>
+        </Box>
+      )}
+
+      {open && item.scope === 'immigration' && (
+        <Box
+          marginTop={10}
+          marginLeft={84}
+        >
+          <Text
+            typo="13"
+            color="text-neutral-light"
+          >
+            {t('callLabel', language)}{' '}
+            <a
+              href="tel:1345"
+              style={{ color: 'var(--skku-blue)', fontWeight: 600 }}
+            >
+              1345
+            </a>
+          </Text>
         </Box>
       )}
 
@@ -410,10 +666,12 @@ function Checklist() {
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
-  const todayRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [showCalendar, setShowCalendar] = useState(false)
+  const [query, setQuery] = useState('')
+  const [booked, setBooked] = useState<Record<string, string>>({})
+  const [preset, setPreset] = useState('')
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -448,24 +706,6 @@ function Checklist() {
     setSize({ width: 520, height: 600 })
   }, [setSize])
 
-  // A timeline opens at now. Sorted by date, the first row is the oldest miss,
-  // which is the one thing a student can no longer do anything about — so the
-  // list is scrolled to the rule, with what is past above and what is coming
-  // below, the way a calendar opens on today rather than on January.
-  useEffect(() => {
-    if (!hydrated) return
-    const rule = todayRef.current
-    const list = listRef.current
-    if (!rule || !list) return
-    // scrollIntoView would scroll the panel itself and take the header with
-    // it, so the offset is applied to the scrolling list on its own.
-    list.scrollTop =
-      rule.offsetTop -
-      list.offsetTop -
-      list.clientHeight / 2 +
-      rule.clientHeight
-  }, [hydrated])
-
   useEffect(() => {
     if (data && !hydrated) {
       setArrivalDate(data.arrivalDate)
@@ -475,6 +715,13 @@ function Checklist() {
       setSemester(data.semester)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
+      )
+      setBooked(
+        Object.fromEntries(
+          data.items
+            .filter((item) => item.bookedFor)
+            .map((item) => [item.id, item.bookedFor as string])
+        )
       )
       setAsking(data.isNew)
       // Every row now carries its date and the list is never truncated, so
@@ -528,6 +775,24 @@ function Checklist() {
     [data, saveProgress]
   )
 
+  /**
+   * Most of these are not done or undone — they are "I have an appointment on
+   * the third". Without somewhere to put that, a student either ticks a thing
+   * they have not done or watches it sit in red for a fortnight.
+   */
+  const setBooking = useCallback(
+    (id: string) => (when: string) => {
+      setBooked((prev) => {
+        const next = { ...prev }
+        if (when) next[id] = when
+        else delete next[id]
+        return next
+      })
+      void persist({ booked: { [id]: when } })
+    },
+    [persist]
+  )
+
   const toggleOpen = useCallback((id: string) => {
     setOpenRows((prev) =>
       prev.includes(id) ? prev.filter((each) => each !== id) : [...prev, id]
@@ -566,11 +831,7 @@ function Checklist() {
         ? (data?.items.find((candidate) => candidate.id === input.about) ??
           null)
         : null
-      const guide = findGuide(
-        item
-          ? `${input.question} ${item.title} ${item.officialKo}`
-          : input.question
-      )
+      const guide = findGuideFor(input.question, item)
 
       let askedInChat = false
       if (data?.targetToken) {
@@ -691,7 +952,11 @@ function Checklist() {
         language={language}
         item={items.find((candidate) => candidate.id === conversation) ?? null}
         ask={askQuestion}
-        onBack={() => setConversation(null)}
+        preset={preset}
+        onBack={() => {
+          setConversation(null)
+          setPreset('')
+        }}
       />
     )
   }
@@ -703,13 +968,6 @@ function Checklist() {
         spacing={14}
       >
         <VStack spacing={4}>
-          <Text
-            typo="11"
-            bold
-            color="text-accent-blue"
-          >
-            {t('setupKicker', language)}
-          </Text>
           <Text
             typo="18"
             bold
@@ -794,14 +1052,14 @@ function Checklist() {
             <Button
               variant={isInternational ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('international', language)}
               onClick={() => setIsInternational(true)}
             />
             <Button
               variant={isInternational ? 'outlined' : 'filled'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('domestic', language)}
               onClick={() => setIsInternational(false)}
             />
@@ -820,14 +1078,14 @@ function Checklist() {
             <Button
               variant={living === 'dorm' ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('dorm', language)}
               onClick={() => setLiving('dorm')}
             />
             <Button
               variant={living === 'commuter' ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('commuter', language)}
               onClick={() => setLiving('commuter')}
             />
@@ -844,7 +1102,7 @@ function Checklist() {
         <Button
           variant="ghost"
           semantic="secondary"
-          size="s"
+          size="m"
           label={t('clear', language)}
           onClick={startOver}
         />
@@ -888,19 +1146,46 @@ function Checklist() {
   const visible =
     category === 'all' ? items : items.filter((item) => item.scope === category)
   const doneCount = items.filter((item) => item.status === 'done').length
+  const lateCount = items.filter((item) => item.status === 'overdue').length
+  // What the term still costs. Every fee is written as prose, so the figures
+  // are read out of it rather than stored twice.
+  const owedWon = items
+    .filter((item) => item.status !== 'done' && item.fee)
+    .reduce((total, item) => {
+      const digits = (item.fee ?? '').replace(/,/g, '').match(/\d{4,}/)
+      return total + (digits ? Number(digits[0]) : 0)
+    }, 0)
+  const owed =
+    owedWon > 0
+      ? language === 'ko'
+        ? `${owedWon.toLocaleString('ko-KR')}원 남음`
+        : `₩${owedWon.toLocaleString('en-US')} to pay`
+      : ''
+  const nextUp = [...items]
+    .filter((item) => item.status !== 'done')
+    .sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))[0]
 
   // Ascending by date, with the finished sunk to the bottom: the rule can only
   // mean "everything above here is behind" if the list is a timeline.
-  const ordered = [...visible].sort((a, b) => {
+  // A student searching knows one word — the Korean term, the English name,
+  // "passport", "dormitory". All of it is searchable, not just the title.
+  const needle = query.trim().toLowerCase()
+  const searched =
+    needle === ''
+      ? visible
+      : visible.filter((item) =>
+          [item.title, item.officialKo, item.why, item.where, ...item.bring]
+            .join(' ')
+            .toLowerCase()
+            .includes(needle)
+        )
+
+  const ordered = [...searched].sort((a, b) => {
     if ((a.status === 'done') !== (b.status === 'done')) {
       return a.status === 'done' ? 1 : -1
     }
     return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0
   })
-  const firstNotLate = ordered.findIndex(
-    (item) => item.status === 'done' || item.daysLeft >= 0
-  )
-  const todayIndex = firstNotLate === -1 ? ordered.length : firstNotLate
   const counts = {
     all: items.length,
     immigration: items.filter((i) => i.scope === 'immigration').length,
@@ -914,65 +1199,98 @@ function Checklist() {
       spacing={12}
     >
       {/*
-        The masthead. The rail carries the count, so the very first number on
-        the screen sits in the same column as every day figure below it — the
-        grid is visible from the first line rather than asserted in a comment.
+        The sentence. A student opens this to find out whether they are in
+        trouble, so the panel says so in words before it shows a list — and
+        the progress run is its underline, not a band of its own.
       */}
-      <Box
-        className="skku-masthead"
-        paddingBottom={12}
-      >
-        <HStack
-          align="end"
-          spacing={12}
+      <VStack spacing={10}>
+        <Text
+          className="skku-say"
+          typo="22"
+          color="text-neutral-light"
         >
-          <Box className="skku-rail">
-            <Text
-              className="skku-tabular"
-              typo="30"
-              bold
-              color="text-neutral"
-            >
-              {String(doneCount)}
-            </Text>
-          </Box>
-          <VStack
-            spacing={2}
-            grow={1}
-            style={{ minWidth: 0 }}
-          >
-            <Text
-              typo="13"
-              color="text-neutral-light"
-            >
+          {lateCount > 0 ? (
+            <>
+              <Text
+                as="span"
+                typo="22"
+                bold
+                color="text-neutral"
+              >
+                {language === 'ko'
+                  ? `${lateCount}개`
+                  : `${lateCount} thing${lateCount === 1 ? '' : 's'}`}
+              </Text>
               {language === 'ko'
-                ? `/ ${items.length} 완료`
-                : `of ${items.length} done`}
-            </Text>
-            <Text
-              typo="12"
-              color="text-neutral-lighter"
-              style={{
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {[
-                data.name,
-                t(
-                  isInternational ? 'profileIntl' : 'profileDomestic',
-                  language
-                ),
-                t(
-                  living === 'dorm' ? 'profileDorm' : 'profileCommuter',
-                  language
-                ),
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          </VStack>
+                ? ' 기한이 지났어요. 아직 할 수 있어요.'
+                : ` ${lateCount === 1 ? 'is' : 'are'} past their date. They can still be fixed.`}
+            </>
+          ) : doneCount === items.length ? (
+            language === 'ko' ? (
+              '전부 끝났어요. 지금 할 일은 없어요.'
+            ) : (
+              'Everything is done. Nothing needs you right now.'
+            )
+          ) : (
+            <>
+              {language === 'ko'
+                ? '기한이 지난 건 없어요. 다음은 '
+                : 'Nothing is late. Next is '}
+              <Text
+                as="span"
+                typo="22"
+                bold
+                color="text-neutral"
+              >
+                {nextUp ? nextUp.officialKo : ''}
+              </Text>
+              {language === 'ko' ? ' 입니다.' : '.'}
+            </>
+          )}
+        </Text>
+
+        <Box className="skku-run">
+          {items.map((item) => (
+            <Box
+              key={item.id}
+              className={
+                item.status === 'done'
+                  ? 'skku-seg skku-seg-done'
+                  : item.status === 'overdue'
+                    ? 'skku-seg skku-seg-late'
+                    : 'skku-seg'
+              }
+            />
+          ))}
+        </Box>
+
+        <HStack
+          align="center"
+          justify="between"
+          spacing={8}
+        >
+          <Text
+            typo="13"
+            color="text-neutral-lighter"
+            style={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {[
+              data.name,
+              t(isInternational ? 'profileIntl' : 'profileDomestic', language),
+              t(
+                living === 'dorm' ? 'profileDorm' : 'profileCommuter',
+                language
+              ),
+              `${doneCount}/${items.length}`,
+              owed,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
           <Box shrink={0}>
             <Button
               variant="ghost"
@@ -983,61 +1301,72 @@ function Checklist() {
             />
           </Box>
         </HStack>
-      </Box>
-
-      <VStack spacing={8}>
-        <HStack
-          as="button"
-          className="skku-plain"
-          align="center"
-          justify="between"
-          onClick={() => setShowCalendar((value) => !value)}
-        >
-          <Text
-            typo="13"
-            bold
-            color="text-neutral-light"
-          >
-            {t('calendar', language)}
-          </Text>
-          <Icon
-            source={showCalendar ? ChevronUpIcon : ChevronDownIcon}
-            size="16"
-            color="icon-neutral"
-          />
-        </HStack>
-        {showCalendar && (
-          <Calendar
-            items={items}
-            today={data.today}
-            language={language}
-            onPick={(id) => {
-              setCategory('all')
-              setOpenRows([id])
-              rowRefs.current[id]?.scrollIntoView({ block: 'center' })
-            }}
-          />
-        )}
       </VStack>
 
-      <SegmentedControl
-        type="radiogroup"
-        size="s"
-        width="100%"
-        value={category}
-        onValueChange={setCategory}
+      {/* One row, not two: the panel has 600px and every band above the
+          first deadline is a band the student did not come for. */}
+      <HStack
+        align="center"
+        spacing={8}
       >
-        {CATEGORY.filter(
-          (option) => option.id === 'all' || counts[option.id] > 0
-        ).map((option) => (
-          <SegmentedControlItem
-            key={option.id}
-            value={option.id}
-          >
-            {`${t(option.short, language)} ${counts[option.id]}`}
-          </SegmentedControlItem>
-        ))}
-      </SegmentedControl>
+        <Box grow={1}>
+          <Search
+            size="m"
+            allowClear
+            placeholder={t('searchPlaceholder', language)}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </Box>
+        <Box shrink={0}>
+          <IconButton
+            size="m"
+            variant="ghost"
+            semantic="secondary"
+            content={CalendarIcon}
+            active={showCalendar}
+            aria-label={t('calendar', language)}
+            onClick={() => setShowCalendar((value) => !value)}
+          />
+        </Box>
+      </HStack>
+
+      {showCalendar && (
+        <Calendar
+          items={items}
+          today={data.today}
+          language={language}
+          onPick={(id) => {
+            setCategory('all')
+            setQuery('')
+            setOpenRows([id])
+            rowRefs.current[id]?.scrollIntoView({ block: 'center' })
+          }}
+        />
+      )}
+
+      {/* While searching, the category chips only narrow a list that is
+          already narrow, and the panel has no room to spare. */}
+      {needle === '' && (
+        <SegmentedControl
+          type="radiogroup"
+          size="m"
+          width="100%"
+          value={category}
+          onValueChange={setCategory}
+        >
+          {CATEGORY.filter(
+            (option) => option.id === 'all' || counts[option.id] > 0
+          ).map((option) => (
+            <SegmentedControlItem
+              key={option.id}
+              value={option.id}
+            >
+              {`${t(option.short, language)} ${counts[option.id]}`}
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
+      )}
 
       {saveFailed && (
         <InlineBanner
@@ -1053,36 +1382,79 @@ function Checklist() {
         ref={listRef}
         className="skku-list"
       >
-        {ordered.map((item, index) => (
-          <Fragment key={item.id}>
-            {index === todayIndex && (
-              <TodayRule
-                ref={todayRef}
-                language={language}
-                nothingLate={todayIndex === 0}
-              />
-            )}
-            <Row
-              rowRef={(node) => {
-                rowRefs.current[item.id] = node
-              }}
-              item={item}
-              language={language}
-              onToggle={toggle(item.id)}
-              onAsk={() => setConversation(item.id)}
-              open={openRows.includes(item.id)}
-              onOpen={() => toggleOpen(item.id)}
-              late={index < todayIndex}
-            />
-          </Fragment>
-        ))}
-        {todayIndex === ordered.length && (
-          <TodayRule
-            ref={todayRef}
-            language={language}
-            nothingLate={false}
-          />
+        {needle !== '' && (
+          <Box paddingVertical={8}>
+            <Text
+              typo="13"
+              color="text-neutral-light"
+            >
+              {ordered.length === 0
+                ? t('searchNone', language)
+                : `${ordered.length} ${t('searchFound', language)}`}
+            </Text>
+          </Box>
         )}
+        {GROUPS.map((group) => {
+          const rows = ordered.filter((item) => group.holds(item))
+          if (rows.length === 0) return null
+          return (
+            <Fragment key={group.key}>
+              {/* The today rule is this gap. A section heading and the air
+                  around it say "these are behind" without a coloured line
+                  drawn through the middle of the list. */}
+              <Box
+                paddingTop={needle === '' ? 14 : 0}
+                paddingBottom={6}
+              >
+                <HStack
+                  align="baseline"
+                  spacing={6}
+                >
+                  <Text
+                    typo="13"
+                    bold
+                    color="text-neutral-lighter"
+                  >
+                    {t(group.key, language)}
+                  </Text>
+                  <Text
+                    className="skku-tabular"
+                    typo="13"
+                    bold
+                    color={
+                      group.key === 'groupLate'
+                        ? 'text-accent-red'
+                        : 'text-neutral-lighter'
+                    }
+                  >
+                    {String(rows.length)}
+                  </Text>
+                </HStack>
+              </Box>
+              {rows.map((item) => (
+                <Row
+                  key={item.id}
+                  rowRef={(node) => {
+                    rowRefs.current[item.id] = node
+                  }}
+                  item={item}
+                  language={language}
+                  onToggle={toggle(item.id)}
+                  onAsk={() => setConversation(item.id)}
+                  onAskThis={(question) => {
+                    setConversation(item.id)
+                    setPreset(question)
+                  }}
+                  open={openRows.includes(item.id)}
+                  onOpen={() => toggleOpen(item.id)}
+                  late={item.status === 'overdue'}
+                  booked={booked[item.id] ?? ''}
+                  onBook={setBooking(item.id)}
+                />
+              ))}
+            </Fragment>
+          )
+        })}
       </Box>
 
       {/* The assistant is always one tap away without spending a row on
@@ -1106,7 +1478,7 @@ function Checklist() {
         <Button
           variant="outlined"
           semantic="primary"
-          size="s"
+          size="m"
           label={
             posted === 'sent' ? t('posted', language) : t('post', language)
           }

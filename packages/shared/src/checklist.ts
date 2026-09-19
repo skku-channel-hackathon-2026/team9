@@ -1124,6 +1124,181 @@ export const REQUIREMENTS: Requirement[] = [
       ],
     },
   },
+  {
+    id: "health-check",
+    title: {
+      en: "Take the new-student health check",
+      ko: "신입생 건강검진 받기",
+    },
+    officialKo: "신입생 건강검진",
+    scope: "life",
+    anchor: "fixed",
+    dueDate: "2026-10-30",
+    bring: { en: ["Student ID", "Your Kingo ID"], ko: ["학생증", "킹고 ID"] },
+    where: {
+      en: "Campus health centre, or a designated hospital",
+      ko: "교내 보건소 또는 지정 병원",
+    },
+    fee: { en: "Free for new students", ko: "신입생 무료" },
+    why: {
+      en: "Required once for new students. The certificate is also what dormitories and part-time employers ask for, so doing it once covers several things.",
+      ko: "신입생은 1회 필수입니다. 기숙사와 아르바이트 채용에서도 요구하는 서류라 한 번에 해결됩니다.",
+    },
+    sourceUrl: "https://www.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "Ask the health centre about a late slot — they usually keep some",
+        "A hospital check-up at your own cost is accepted if the campus window has closed",
+      ],
+      ko: [
+        "보건소에 추가 일정이 있는지 문의하세요. 보통 여유분이 있습니다",
+        "교내 일정이 끝났다면 자비로 병원 검진을 받아 제출해도 인정됩니다",
+      ],
+    },
+  },
+  {
+    id: "volunteer-hours",
+    title: {
+      en: "Start your required volunteer hours",
+      ko: "사회봉사 이수 시작",
+    },
+    officialKo: "사회봉사",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-14",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: {
+      en: "SKKU portal — volunteer programme listings",
+      ko: "성균관대 포털 — 사회봉사 프로그램",
+    },
+    why: {
+      en: "It is a graduation requirement, not an extra. Students who leave it to the final year discover the hours cannot be compressed.",
+      ko: "선택이 아니라 졸업요건입니다. 마지막 학년에 몰아서 하려다 시간을 채우지 못하는 경우가 많습니다.",
+    },
+    sourceUrl: "https://www.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "Hours carry across semesters, so starting late costs time rather than the requirement",
+        "Ask your department which external programmes they recognise before signing up",
+      ],
+      ko: [
+        "봉사시간은 학기를 넘겨 누적되므로 늦게 시작해도 요건 자체가 사라지지는 않습니다",
+        "신청 전에 학과에서 인정하는 외부 프로그램을 먼저 확인하세요",
+      ],
+    },
+  },
+  {
+    id: "winter-session",
+    title: {
+      en: "Register for the winter session if you need credits",
+      ko: "동계 계절학기 수강신청",
+    },
+    officialKo: "계절학기 수강신청",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-07",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: { en: "SKKU portal (GLS)", ko: "성균관대 포털 (GLS)" },
+    fee: {
+      en: "Charged per credit, separately from tuition",
+      ko: "학점당 수업료, 등록금과 별도",
+    },
+    why: {
+      en: "The fastest way to recover credits from a course you withdrew from or failed, and the only one that does not cost a whole semester.",
+      ko: "철회하거나 실패한 과목의 학점을 회복하는 가장 빠른 방법이며, 한 학기를 통째로 쓰지 않아도 됩니다.",
+    },
+    sourceUrl:
+      "https://www.skku.edu/eng/edu/bachelor/ca_de_schedule.do?srBachelorYear=2026",
+    national: false,
+    audience: "all",
+    living: "any",
+    recovery: {
+      en: [
+        "International students: check with the international office first — a winter session affects what your visa expects of you",
+      ],
+      ko: [
+        "유학생은 국제처에 먼저 확인하세요. 계절학기 수강은 체류자격 심사에 영향이 있습니다",
+      ],
+    },
+  },
+  {
+    id: "dorm-next-term",
+    title: {
+      en: "Apply again for next semester's dormitory place",
+      ko: "다음 학기 기숙사 재입사 신청",
+    },
+    officialKo: "기숙사 재입사 신청",
+    scope: "life",
+    anchor: "fixed",
+    dueDate: "2026-11-20",
+    bring: {
+      en: ["Your Kingo ID", "Health check certificate"],
+      ko: ["킹고 ID", "건강검진 결과서"],
+    },
+    where: { en: "Dormitory portal", ko: "기숙사 포털" },
+    why: {
+      en: "A place this semester does not carry over. Missing the window means looking for a room off campus in the middle of exams.",
+      ko: "이번 학기 입사가 다음 학기로 이어지지 않습니다. 기간을 놓치면 시험 기간에 학교 밖 방을 구해야 합니다.",
+    },
+    sourceUrl: "https://dorm.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "dorm",
+    recovery: {
+      en: [
+        "Ask about the waiting list (예비번호) immediately — places open as others withdraw",
+        "The international office keeps a list of nearby 고시원 and share houses if nothing opens",
+      ],
+      ko: [
+        "즉시 예비번호를 신청하세요. 취소자가 생기면 자리가 납니다",
+        "자리가 나지 않으면 국제처에 인근 고시원·셰어하우스 목록을 문의하세요",
+      ],
+    },
+  },
+  {
+    id: "english-requirement",
+    title: {
+      en: "Submit an English score for graduation",
+      ko: "졸업 영어성적 제출",
+    },
+    officialKo: "졸업요건 영어성적",
+    scope: "academic",
+    anchor: "fixed",
+    dueDate: "2026-12-31",
+    bring: {
+      en: ["An official TOEIC, TOEFL or TEPS score report"],
+      ko: ["TOEIC·TOEFL·TEPS 공식 성적표"],
+    },
+    where: { en: "SKKU portal (GLS)", ko: "성균관대 포털 (GLS)" },
+    fee: {
+      en: "The test itself costs around KRW 50,000",
+      ko: "시험 응시료 약 5만원",
+    },
+    why: {
+      en: "A graduation requirement with no deadline until suddenly there is one. Scores expire after two years, so taking it too early wastes it and too late blocks graduation.",
+      ko: "기한이 없다가 갑자기 생기는 졸업요건입니다. 성적은 2년간 유효하므로 너무 일찍 봐도, 너무 늦게 봐도 문제가 됩니다.",
+    },
+    sourceUrl: "https://www.skku.edu/",
+    national: false,
+    audience: "domestic",
+    living: "any",
+    recovery: {
+      en: [
+        "Check your department's required score before booking — it differs by college",
+        "Test dates fill weeks ahead, so book the sitting before you start studying",
+      ],
+      ko: [
+        "예약 전에 학과별 기준 점수를 확인하세요. 단과대학마다 다릅니다",
+        "시험 일정은 몇 주 전에 마감되므로 공부를 시작하기 전에 접수부터 하세요",
+      ],
+    },
+  },
 ];
 
 export type RequirementStatus =
@@ -1149,6 +1324,7 @@ export interface RequirementState {
   /** Negative once the due date has passed. */
   daysLeft: number;
   status: RequirementStatus;
+  bookedFor?: string;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -1241,6 +1417,8 @@ export interface ChecklistInput {
   semesterStart: string;
   /** Requirement ids the student has already completed. */
   completed: string[];
+  /** Requirement id -> the date an appointment is booked for. */
+  booked?: Record<string, string>;
   /** Today, YYYY-MM-DD. Passed in so the result is deterministic to test. */
   today: string;
   /** Omitted means treat every requirement as applicable. */
@@ -1291,6 +1469,7 @@ export function buildChecklist(input: ChecklistInput): RequirementState[] {
       dueDate: toIsoDate(due),
       daysLeft,
       status: statusFor(daysLeft, done),
+      bookedFor: input.booked?.[requirement.id],
     } satisfies RequirementState;
   });
 
@@ -1321,6 +1500,8 @@ export const StoredProgressSchema = z.object({
   arrivalDate: z.string(),
   semesterStart: z.string(),
   completed: z.array(z.string()),
+  /** id -> ISO date. Neither done nor undone: an appointment is made. */
+  booked: z.record(z.string()).default({}),
   isInternational: z.boolean().default(true),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
   university: z.string().default("skku"),
@@ -1345,11 +1526,24 @@ export const RequirementStateSchema = z.object({
   dueDate: z.string(),
   daysLeft: z.number(),
   status: z.enum(["done", "overdue", "urgent", "soon", "later"]),
+  /** The date an appointment is booked for, when the student set one. */
+  bookedFor: z.string().optional(),
 });
 
 /** Everything the WAM needs to render the checklist without another call. */
+/**
+ * What the host hands the panel.
+ *
+ * Desk passes these in the WAM's own URL, so every field is spent on a query
+ * string. The computed rows used to travel here and came to 28KB encoded at
+ * twenty-five requirements, which is past a proxy's URI limit — the panel got
+ * "414 Request-URI Too Large" instead of loading. The deadline rules are
+ * compiled into the panel's bundle, so only the stored answers travel and it
+ * calls buildChecklist itself.
+ */
 export const ChecklistWamArgsSchema = z.object({
-  items: z.array(RequirementStateSchema),
+  completed: z.array(z.string()).default([]),
+  booked: z.record(z.string()).default({}),
   arrivalDate: z.string(),
   semesterStart: z.string(),
   today: z.string(),
@@ -1380,7 +1574,10 @@ export const ChecklistWamArgsSchema = z.object({
   view: z.enum(["brief", "calendar"]).default("brief"),
 });
 
-export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;
+export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema> & {
+  /** Built in the panel from the fields above, never sent over the wire. */
+  items: RequirementState[];
+};
 
 /**
  * Progress sent through the command's existing free-form `input` field. That
@@ -1388,6 +1585,7 @@ export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;
  * way needs no new function and no re-registration.
  */
 export const ProgressUpdateSchema = z.object({
+  booked: z.record(z.string()).optional(),
   completed: z.array(z.string()).max(50).optional(),
   arrivalDate: z.string().optional(),
   isInternational: z.boolean().optional(),
@@ -1406,7 +1604,8 @@ export function hasProgressUpdate(update: ProgressUpdate): boolean {
     update.isInternational !== undefined ||
     update.living !== undefined ||
     update.university !== undefined ||
-    update.semester !== undefined
+    update.semester !== undefined ||
+    update.booked !== undefined
   );
 }
 
@@ -1424,6 +1623,14 @@ export function applyProgressUpdate(
     completed: update.completed
       ? Array.from(new Set(update.completed))
       : current.completed,
+    booked: update.booked
+      ? // A blank date clears the booking rather than storing an empty string.
+        Object.fromEntries(
+          Object.entries({ ...current.booked, ...update.booked }).filter(
+            ([, when]) => when !== "",
+          ),
+        )
+      : (current.booked ?? {}),
     isInternational: update.isInternational ?? current.isInternational,
     living: update.living ?? current.living,
     university: update.university ?? current.university,
@@ -1442,6 +1649,8 @@ export type SaveProgressInput = z.infer<typeof SaveProgressInputSchema>;
 export const SaveProgressOutputSchema = z.object({
   saved: z.boolean(),
   completed: z.array(z.string()),
+  /** id -> ISO date. Neither done nor undone: an appointment is made. */
+  booked: z.record(z.string()).default({}),
 });
 
 export const CHECKLIST_FUNCTIONS = {
@@ -1466,6 +1675,7 @@ export function defaultProgress(today: string): StoredProgress {
     arrivalDate: start,
     semesterStart: start,
     completed: [],
+    booked: {},
     isInternational: true,
     living: "dorm",
     university: "skku",

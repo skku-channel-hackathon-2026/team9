@@ -62,7 +62,8 @@ export function installDevPreview(): void {
     // the conversation. There is no chat here, but the UI branches on whether
     // it has one, so the preview carries a stand-in.
     targetToken: 'preview-target-token',
-    items: buildChecklist({ ...progress, today, profile: profileOf(progress) }),
+    completed: progress.completed,
+    booked: progress.booked ?? {},
     arrivalDate: progress.arrivalDate,
     semesterStart: progress.semesterStart,
     today,
