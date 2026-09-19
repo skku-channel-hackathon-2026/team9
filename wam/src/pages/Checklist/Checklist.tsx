@@ -17,7 +17,6 @@ import {
   suggestedQuestions,
   languageFor,
   pick,
-  UNIVERSITIES,
   universityById,
   SCHOOL,
   TUTORIAL_FUNCTIONS,
@@ -48,6 +47,7 @@ import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
 import Assistant from './Assistant'
 import Calendar from './Calendar'
+import { UNICUE_MARK } from '../../logo'
 import './brand.css'
 import { t } from './strings'
 
@@ -85,16 +85,6 @@ const CATEGORY = [
   { id: 'academic', key: 'catAcademic', short: 'catAcademicShort' },
   { id: 'life', key: 'catLife', short: 'catLife' },
 ] as const
-
-const SELECT_STYLE = {
-  width: '100%',
-  padding: '9px 10px',
-  borderRadius: 8,
-  border: '1px solid var(--color-border-neutral)',
-  background: 'transparent',
-  color: 'inherit',
-  font: 'inherit',
-}
 
 const DATE_INPUT_STYLE = {
   width: '100%',
@@ -967,53 +957,40 @@ function Checklist() {
         className="skku"
         spacing={14}
       >
-        <VStack spacing={4}>
-          <Text
-            typo="18"
-            bold
-            color="text-neutral"
+        <Box
+          className="skku-masthead"
+          paddingBottom={12}
+        >
+          <HStack
+            align="center"
+            spacing={10}
           >
-            {t('setupTitle', language)}
-          </Text>
-          <Text
-            typo="13"
-            color="text-neutral-lighter"
-          >
-            {t('setupLead', language)}
-          </Text>
-        </VStack>
-
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
-          >
-            {t('university', language)}
-          </Text>
-          <select
-            value={university}
-            onChange={(event) => setUniversity(event.target.value)}
-            style={SELECT_STYLE}
-          >
-            {UNIVERSITIES.map((option) => (
-              <option
-                key={option.id}
-                value={option.id}
+            <Box shrink={0}>
+              <img
+                src={UNICUE_MARK}
+                alt="UniCue"
+                width={28}
+                height={28}
+                style={{ display: 'block' }}
+              />
+            </Box>
+            <VStack spacing={2}>
+              <Text
+                typo="18"
+                bold
+                color="text-neutral"
               >
-                {pick(option.name, language)}
-              </option>
-            ))}
-          </select>
-          {!school.hasSchoolDates && (
-            <Text
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {t('noSchoolDates', language)}
-            </Text>
-          )}
-        </VStack>
+                {t('setupTitle', language)}
+              </Text>
+              <Text
+                typo="13"
+                color="text-neutral-light"
+              >
+                {`${pick(school.name, language)} · ${t('setupLead', language)}`}
+              </Text>
+            </VStack>
+          </HStack>
+        </Box>
 
         {isInternational && (
           <VStack spacing={4}>
@@ -1269,6 +1246,17 @@ function Checklist() {
           justify="between"
           spacing={8}
         >
+          {/* The mark rides on this line rather than taking a band of its
+              own: the panel has 600px and a logo is not a deadline. */}
+          <Box shrink={0}>
+            <img
+              src={UNICUE_MARK}
+              alt="UniCue"
+              width={18}
+              height={18}
+              style={{ display: 'block' }}
+            />
+          </Box>
           <Text
             typo="13"
             color="text-neutral-lighter"

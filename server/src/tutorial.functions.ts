@@ -355,18 +355,18 @@ export class TutorialFunctions {
 
     const today = todayInSeoul();
     const { progress } = await loadProgress(ctx, today);
+    const profile = {
+      isInternational: progress.isInternational,
+      living: progress.living,
+      university: progress.university,
+      semester: progress.semester,
+    };
     const summary = composeSummary(
-      buildChecklist({
-        ...progress,
-        today,
-        profile: {
-          isInternational: progress.isInternational,
-          living: progress.living,
-          university: progress.university,
-          semester: progress.semester,
-        },
-      }),
+      buildChecklist({ ...progress, today, profile }),
       today,
+      // A domestic student reads the panel in Korean; posting their own
+      // checklist into the chat in English made it someone else's.
+      languageFor(profile),
     );
 
     const token = await this.tokenManager.getChannelToken({
@@ -382,7 +382,7 @@ export class TutorialFunctions {
         broadcast: input.broadcast,
         dto: {
           plainText: summary,
-          botName: "Freshman Checklist",
+          botName: "UniCue",
         },
       });
     } catch {
@@ -511,7 +511,7 @@ export class TutorialFunctions {
         .writeGroupMessage({
           channelId: ctx.channel.id,
           groupId,
-          dto: { plainText: text, botName: "Freshman Checklist" },
+          dto: { plainText: text, botName: "UniCue" },
         });
       return true;
     } catch {
