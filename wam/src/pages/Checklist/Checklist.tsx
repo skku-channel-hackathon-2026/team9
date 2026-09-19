@@ -416,8 +416,8 @@ function Checklist() {
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
       setAsking(data.isNew)
-      // `/calendar` is a request to see every date, so it opens on all of
-      // them rather than on the three that matter today.
+      // Asking for the dated view is asking to see every date, so it opens
+      // on all of them rather than on the three that matter today.
       setExpanded(data.view === 'calendar')
       // The most urgent row opens itself, so the panel is never all headings.
       const firstOpen = data.items.find((item) => item.status !== 'done')
