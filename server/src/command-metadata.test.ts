@@ -8,7 +8,9 @@ test("registers the calendar desk command", async () => {
   process.env.SIGNING_KEY = "test-signing-key";
   const { CommandExtension } = await import("./tutorial.functions.js");
   const metadata = new CommandExtension().getCommands();
-  const calendar = metadata.commands.find((command) => command.name === "calendar");
+  const calendar = metadata.commands.find(
+    (command) => command.name === "calendar",
+  );
 
   assert.equal(calendar?.scope, "desk");
   assert.equal(calendar?.actionFunctionName, TUTORIAL_FUNCTIONS.showCalendar);

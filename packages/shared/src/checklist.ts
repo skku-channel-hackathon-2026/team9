@@ -1070,6 +1070,14 @@ export const ChecklistWamArgsSchema = z.object({
   targetToken: z.string().optional(),
   /** False when D1 is unavailable, so the UI can explain why ticks won't stick. */
   canSave: z.boolean(),
+  /**
+   * Which way in the student arrived. "brief" leads with the few things that
+   * matter now, which is what someone asking "what do I have to do" needs.
+   * "calendar" opens on every date at once, for someone who came to plan
+   * rather than to act — a different question deserving a different first
+   * screen, not a different app.
+   */
+  view: z.enum(["brief", "calendar"]).default("brief"),
 });
 
 export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;

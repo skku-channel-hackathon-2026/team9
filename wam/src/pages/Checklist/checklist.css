@@ -205,8 +205,9 @@
 
 .cl-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 6px 12px;
   padding-top: 2px;
 }
 
@@ -373,4 +374,75 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* --- assistant -------------------------------------------------------- */
+
+/*
+ * The conversation takes over the panel rather than sitting under the list:
+ * in a 420px column an answer and a ledger cannot both be readable. Same
+ * height cap as the list, so switching views does not move the window.
+ */
+.cl-chat {
+  max-height: 516px;
+}
+
+.cl-thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.cl-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 2px solid var(--cl-line);
+  padding-left: 9px;
+}
+
+.cl-turn[data-role='assistant'] {
+  border-left-color: var(--cl-ink);
+}
+
+.cl-turn-who {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cl-muted);
+}
+
+.cl-turn-text {
+  font-size: 13px;
+  line-height: 1.55;
+  /* Answers arrive as plain text, and their line breaks carry the steps. */
+  white-space: pre-wrap;
+}
+
+.cl-compose {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.cl-send {
+  border: none;
+  border-radius: 8px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--cl-ink);
+  cursor: pointer;
+}
+
+.cl-send[disabled] {
+  background: var(--cl-later);
+  cursor: default;
 }

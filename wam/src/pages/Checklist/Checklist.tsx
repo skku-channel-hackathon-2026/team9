@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
+  ASSISTANT_FUNCTIONS,
   buildChecklist,
   calendarUrl,
   languageFor,
@@ -9,6 +10,7 @@ import {
   TUTORIAL_FUNCTIONS,
   UNIVERSITIES,
   universityById,
+  type AssistantAnswer,
   type Language,
   type ProgressUpdate,
   type RequirementState,
@@ -16,6 +18,7 @@ import {
 } from '@tutorial/shared'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
+import Assistant from './Assistant'
 import { t } from './strings'
 import './checklist.css'
 
@@ -86,13 +89,12 @@ function Row({
   language,
   onToggle,
   onAsk,
-  askState,
 }: {
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
+  /** Opens the question view with this row as the subject. */
   onAsk: () => void
-  askState: 'idle' | 'sent' | 'failed'
 }) {
   const count = countdown(item, language)
   const done = item.status === 'done'
@@ -159,10 +161,9 @@ function Row({
           <button
             type="button"
             className="cl-ask"
-            disabled={askState === 'sent'}
             onClick={onAsk}
           >
-            {askState === 'sent' ? t('asked', language) : t('ask', language)}
+            {t('ask', language)}
           </button>
           {!done && (
             <a
@@ -183,9 +184,6 @@ function Row({
             {t('source', language)}
           </a>
         </div>
-        {askState === 'failed' && (
-          <div className="cl-penalty">{t('askFailed', language)}</div>
-        )}
       </div>
     </div>
   )
@@ -204,8 +202,13 @@ function Checklist() {
   const [expanded, setExpanded] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
-  const [asked, setAsked] = useState<Record<string, 'sent' | 'failed'>>({})
   const [hydrated, setHydrated] = useState(false)
+  /**
+   * Which view the panel is showing. `null` is the list; a string is the
+   * assistant, carrying the requirement it was opened from, or "" when it was
+   * opened from the footer and is about the list as a whole.
+   */
+  const [conversation, setConversation] = useState<string | null>(null)
 
   const { call: saveProgress } = useCallFunction<unknown>({
     appId,
@@ -214,6 +217,10 @@ function Checklist() {
   const { call: postToChat, loading: posting } = useCallFunction<void>({
     appId,
     name: TUTORIAL_FUNCTIONS.sendAsBot,
+  })
+  const { call: askAssistant } = useCallFunction<AssistantAnswer>({
+    appId,
+    name: ASSISTANT_FUNCTIONS.ask,
   })
 
   useEffect(() => {
@@ -230,6 +237,9 @@ function Checklist() {
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
       setAsking(data.isNew)
+      // `/calendar` is a request to see every date, so it opens on all of
+      // them rather than on the three that matter today.
+      setExpanded(data.view === 'calendar')
       setHydrated(true)
     }
   }, [data, hydrated])
@@ -282,24 +292,6 @@ function Checklist() {
     [completed, persist]
   )
 
-  const ask = useCallback(
-    (id: string) => async () => {
-      if (!data?.targetToken) {
-        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
-        return
-      }
-      try {
-        await saveProgress({
-          input: { askAbout: id, targetToken: data.targetToken },
-        })
-        setAsked((prev) => ({ ...prev, [id]: 'sent' }))
-      } catch {
-        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
-      }
-    },
-    [data, saveProgress]
-  )
-
   const confirm = useCallback(() => {
     setAsking(false)
     void persist({
@@ -342,8 +334,34 @@ function Checklist() {
     }
   }, [data, postToChat])
 
+  /**
+   * The server answers against this person's stored progress rather than
+   * anything the panel sends, so only the question, the row it came from and
+   * the permission to post into the chat travel with it.
+   */
+  const askQuestion = useCallback(
+    (input: { question: string; about?: string }) =>
+      askAssistant({
+        question: input.question,
+        about: input.about,
+        targetToken: data?.targetToken,
+      }),
+    [askAssistant, data]
+  )
+
   if (error || !data) {
     return <div className="cl cl-note">{t('loadFailed', 'en')}</div>
+  }
+
+  if (conversation !== null) {
+    return (
+      <Assistant
+        language={language}
+        item={items.find((item) => item.id === conversation) ?? null}
+        ask={askQuestion}
+        onBack={() => setConversation(null)}
+      />
+    )
   }
 
   if (asking) {
@@ -518,13 +536,19 @@ function Checklist() {
             item={item}
             language={language}
             onToggle={toggle(item.id)}
-            onAsk={() => void ask(item.id)()}
-            askState={asked[item.id] ?? 'idle'}
+            onAsk={() => setConversation(item.id)}
           />
         ))}
       </div>
 
       <div className="cl-foot">
+        <button
+          type="button"
+          className="cl-quiet"
+          onClick={() => setConversation('')}
+        >
+          {t('assistantOpen', language)}
+        </button>
         {visible.length > shown.length && (
           <button
             type="button"

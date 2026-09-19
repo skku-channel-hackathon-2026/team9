@@ -46,6 +46,8 @@ design guidance:
 - a shared Zod contract package used by both the server and React WAM
 - redesigned Bezier components from `@channel.io/bezier-react/beta`
 - normalization of nullable optional command fields currently emitted by AppStore
+- an in-panel question box that answers from written, sourced guidance and hands the same
+  question to ALF in the conversation with the student's own dates attached
 
 Run the `/tutorial` desk command in a group chat to open a WAM. The WAM can send a team-chat message
 either through the app bot (server-side app function) or as the current manager (WAM native
