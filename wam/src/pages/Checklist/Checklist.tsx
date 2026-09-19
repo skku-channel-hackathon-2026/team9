@@ -49,17 +49,19 @@ const DATE_INPUT_STYLE = {
   font: 'inherit',
 }
 
+const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`
+
 function dueLabel(item: RequirementState): string {
   if (item.status === 'done') {
     return 'Done'
   }
   if (item.daysLeft < 0) {
-    return `${Math.abs(item.daysLeft)} days overdue`
+    return `${days(Math.abs(item.daysLeft))} overdue`
   }
   if (item.daysLeft === 0) {
     return 'Due today'
   }
-  return `${item.daysLeft} days left`
+  return `${days(item.daysLeft)} left`
 }
 
 function Checklist() {

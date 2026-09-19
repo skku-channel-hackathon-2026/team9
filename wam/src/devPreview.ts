@@ -45,6 +45,12 @@ export function installDevPreview(): void {
     canSave: true,
   })
 
+  // index.html sets the page background from the host before this module runs,
+  // so outside Desk it always falls through to the light value. Apply the
+  // preview's own choice here, or dark theme renders light text on white.
+  document.body.style.backgroundColor =
+    appearance === 'dark' ? '#464748' : '#FFFFFF'
+
   window.ChannelIOWam = {
     getWamData: (key) => data()[key],
     setSize: (size) => console.info('[preview] setSize', size),

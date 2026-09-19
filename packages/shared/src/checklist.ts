@@ -511,7 +511,7 @@ export function composeSummary(
     lines.push("", `Already passed (${missed.length})`);
     for (const item of missed) {
       lines.push(
-        `• ${item.title} (${item.titleKo}) — ${Math.abs(item.daysLeft)} days ago, due ${item.dueDate}`,
+        `• ${item.title} (${item.titleKo}) — ${Math.abs(item.daysLeft)} day${Math.abs(item.daysLeft) === 1 ? "" : "s"} ago, due ${item.dueDate}`,
       );
       const step = item.recovery[0];
       if (step) lines.push(`    what to do: ${step}`);
@@ -522,7 +522,7 @@ export function composeSummary(
     lines.push("", `Still ahead (${upcoming.length})`);
     for (const item of upcoming.slice(0, 5)) {
       lines.push(
-        `• ${item.title} (${item.titleKo}) — ${item.daysLeft} days left, due ${item.dueDate}`,
+        `• ${item.title} (${item.titleKo}) — ${item.daysLeft} day${item.daysLeft === 1 ? "" : "s"} left, due ${item.dueDate}`,
       );
     }
   }
