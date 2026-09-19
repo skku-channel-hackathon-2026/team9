@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildChecklist,
+  composeQuestion,
   defaultProgress,
   daysBetween,
   nextAction,
@@ -287,4 +288,45 @@ test("every requirement explains why it applies, in both languages", () => {
       assert.ok(item.why.length > 10, `${item.id} has no explanation`);
     }
   }
+});
+
+test("a question carries the Korean term, the date and the source", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm" },
+  });
+  const overdue = items.find((item) => item.status === "overdue");
+  assert.ok(overdue);
+  const question = composeQuestion(overdue, "en", "2026-09-19");
+  assert.match(question, /already missed it/);
+  assert.ok(question.includes(overdue.officialKo));
+  assert.ok(question.includes(overdue.dueDate));
+  assert.ok(question.includes(overdue.sourceUrl));
+});
+
+test("a question about something still ahead asks how to prepare", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: true, living: "dorm" },
+  });
+  const ahead = items.find((item) => item.daysLeft > 0);
+  assert.ok(ahead);
+  const question = composeQuestion(ahead, "en", "2026-09-19");
+  assert.match(question, /what I need to prepare/);
+  assert.ok(!question.includes("already missed"));
+});
+
+test("a Korean student's question is written in Korean", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: { isInternational: false, living: "dorm" },
+  });
+  const first = items[0];
+  assert.ok(first);
+  const question = composeQuestion(first, "ko", "2026-09-19");
+  assert.ok(/[가-힣]/.test(question));
+  assert.ok(question.includes(first.officialKo));
 });
