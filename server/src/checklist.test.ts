@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildChecklist,
+  defaultProgress,
   daysBetween,
   nextAction,
   parseIsoDate,
@@ -94,4 +95,28 @@ test("day arithmetic stays whole across a DST-free UTC span", () => {
 test("done overrides an overdue date", () => {
   assert.equal(statusFor(-5, true), "done");
   assert.equal(statusFor(-5, false), "overdue");
+});
+
+test("defaults to a recent arrival so the list is not all overdue", () => {
+  const progress = defaultProgress("2026-09-19");
+  assert.equal(progress.arrivalDate, "2026-08-20");
+  assert.deepEqual(progress.completed, []);
+
+  const items = buildChecklist({ ...progress, today: "2026-09-19" });
+  const statuses = new Set(items.map((item) => item.status));
+  assert.ok(items.length > 0);
+  assert.ok(
+    statuses.size > 1,
+    `expected a mix of statuses, got ${[...statuses].join(", ")}`,
+  );
+  assert.ok(
+    items.some((item) => item.daysLeft > 0),
+    "at least one requirement should still be ahead of the student",
+  );
+});
+
+test("a malformed today still yields a usable default", () => {
+  const progress = defaultProgress("nope");
+  assert.equal(progress.arrivalDate, "nope");
+  assert.deepEqual(progress.completed, []);
 });

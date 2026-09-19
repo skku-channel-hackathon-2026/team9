@@ -4,8 +4,7 @@ import {
   buildChecklist,
   CHECKLIST_FUNCTIONS,
   CommandActionInputSchema,
-  DEFAULT_ARRIVAL,
-  DEFAULT_SEMESTER_START,
+  defaultProgress,
   parseIsoDate,
   SaveProgressInputSchema,
   SaveProgressOutputSchema,
@@ -63,17 +62,14 @@ function recordIdFor(ctx: Context): string {
 }
 
 /** Stored progress, or sensible defaults the first time someone opens this. */
-async function loadProgress(ctx: Context): Promise<StoredProgress> {
+async function loadProgress(
+  ctx: Context,
+  today: string,
+): Promise<StoredProgress> {
   const parsed = StoredProgressSchema.safeParse(
     await readRecord(recordIdFor(ctx)),
   );
-  return parsed.success
-    ? parsed.data
-    : {
-        arrivalDate: DEFAULT_ARRIVAL,
-        semesterStart: DEFAULT_SEMESTER_START,
-        completed: [],
-      };
+  return parsed.success ? parsed.data : defaultProgress(today);
 }
 
 @Extension({ name: "command", systemVersion: "v1" })
@@ -151,8 +147,8 @@ export class TutorialFunctions {
       targetToken,
     } satisfies TutorialWamArgs;
 
-    const progress = await loadProgress(ctx);
     const today = todayInSeoul();
+    const progress = await loadProgress(ctx, today);
 
     return {
       type: "wam",
@@ -237,7 +233,7 @@ export class TutorialFunctions {
       );
     }
 
-    const current = await loadProgress(ctx);
+    const current = await loadProgress(ctx, todayInSeoul());
     const next: StoredProgress = {
       arrivalDate: input.arrivalDate ?? current.arrivalDate,
       semesterStart: current.semesterStart,

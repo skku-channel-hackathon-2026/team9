@@ -269,6 +269,19 @@ export const CHECKLIST_FUNCTIONS = {
   saveProgress: "tutorial.saveProgress",
 } as const;
 
-/** Default dates used when a student has no stored record yet. */
-export const DEFAULT_ARRIVAL = "2026-03-02";
-export const DEFAULT_SEMESTER_START = "2026-03-02";
+/**
+ * How far back to assume a student arrived when they have no stored record.
+ * Relative rather than fixed: a hardcoded date silently rots into a screen
+ * where every requirement reads as overdue.
+ */
+export const ASSUMED_DAYS_SINCE_ARRIVAL = 30;
+
+/** Starting point for someone opening the checklist for the first time. */
+export function defaultProgress(today: string): StoredProgress {
+  const parsed = parseIsoDate(today);
+  const start =
+    parsed === null
+      ? today
+      : toIsoDate(addDays(parsed, -ASSUMED_DAYS_SINCE_ARRIVAL));
+  return { arrivalDate: start, semesterStart: start, completed: [] };
+}
