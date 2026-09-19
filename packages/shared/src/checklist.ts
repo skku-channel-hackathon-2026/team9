@@ -1700,39 +1700,70 @@ export const SCHOOL = {
 export function composeSummary(
   items: RequirementState[],
   today: string,
+  /** The student's language. Without it a Korean student posted English. */
+  language: Language = "en",
 ): string {
+  const ko = language === "ko";
   const missed = items.filter((item) => item.status === "overdue");
   const upcoming = items.filter(
     (item) => item.status !== "overdue" && item.status !== "done",
   );
 
-  const lines: string[] = [`Freshman checklist — as of ${today}`];
+  const lines: string[] = [
+    ko
+      ? `신입생 체크리스트 — ${today} 기준`
+      : `Freshman checklist — as of ${today}`,
+  ];
 
   if (missed.length > 0) {
-    lines.push("", `Already passed (${missed.length})`);
+    lines.push(
+      "",
+      ko
+        ? `기한이 지난 항목 (${missed.length})`
+        : `Already passed (${missed.length})`,
+    );
     for (const item of missed) {
+      const days = Math.abs(item.daysLeft);
       lines.push(
-        `• ${item.title} (${item.officialKo}) — ${Math.abs(item.daysLeft)} day${Math.abs(item.daysLeft) === 1 ? "" : "s"} ago, due ${item.dueDate}`,
+        ko
+          ? `• ${item.officialKo} (${item.title}) — ${days}일 지남, 기한 ${item.dueDate}`
+          : `• ${item.title} (${item.officialKo}) — ${days} day${days === 1 ? "" : "s"} ago, due ${item.dueDate}`,
       );
       const step = item.recovery[0];
-      if (step) lines.push(`    what to do: ${step}`);
+      if (step)
+        lines.push(ko ? `    지금 할 일: ${step}` : `    what to do: ${step}`);
     }
   }
 
   if (upcoming.length > 0) {
-    lines.push("", `Still ahead (${upcoming.length})`);
+    lines.push(
+      "",
+      ko
+        ? `남은 항목 (${upcoming.length})`
+        : `Still ahead (${upcoming.length})`,
+    );
     for (const item of upcoming.slice(0, 5)) {
       lines.push(
-        `• ${item.title} (${item.officialKo}) — ${item.daysLeft} day${item.daysLeft === 1 ? "" : "s"} left, due ${item.dueDate}`,
+        ko
+          ? `• ${item.officialKo} (${item.title}) — ${item.daysLeft}일 남음, 기한 ${item.dueDate}`
+          : `• ${item.title} (${item.officialKo}) — ${item.daysLeft} day${item.daysLeft === 1 ? "" : "s"} left, due ${item.dueDate}`,
       );
     }
   }
 
   if (missed.length === 0 && upcoming.length === 0) {
-    lines.push("", "Nothing outstanding.");
+    lines.push(
+      "",
+      ko ? "지금 처리할 항목이 없습니다." : "Nothing outstanding.",
+    );
   }
 
-  lines.push("", `University dates: ${SCHOOL.nameKo}, ${SCHOOL.termKo}`);
+  lines.push(
+    "",
+    ko
+      ? `학사 일정: ${SCHOOL.nameKo}, ${SCHOOL.termKo}`
+      : `University dates: ${SCHOOL.nameKo}, ${SCHOOL.termKo}`,
+  );
   return lines.join("\n");
 }
 
