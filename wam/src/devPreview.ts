@@ -37,6 +37,7 @@ export function installDevPreview(): void {
   let progress: StoredProgress = {
     ...defaultProgress(today),
     completed: ['health-insurance'],
+    name: 'Alex',
     isInternational: query.get('student') !== 'domestic',
     living: query.get('living') === 'commuter' ? 'commuter' : 'dorm',
   }
@@ -72,7 +73,7 @@ export function installDevPreview(): void {
     living: progress.living,
     university: progress.university,
     semester: progress.semester,
-    name: 'Alex',
+    studentName: 'Alex',
     canSave: true,
     view: query.has('calendar') ? 'calendar' : 'brief',
   })
