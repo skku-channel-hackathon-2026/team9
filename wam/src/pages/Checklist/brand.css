@@ -1,11 +1,13 @@
 /*
- * Sungkyunkwan's colours, applied by re-pointing the design tokens the
- * components already resolve rather than by selecting on class names, which
- * are hashed and change between builds.
+ * Sungkyunkwan's colours and the panel's structure.
  *
- * Colour appears in three places on the list and nowhere else: the progress
- * fill (green), the today rule and the day figures above it (late), and the
- * one filled button per screen (navy). Everything else is ink on a surface.
+ * The panel is built on one idea: a fixed left rail, 72px wide, that carries a
+ * number on every line — the count in the masthead, the day figure on every
+ * row, the date on the today rule. Everything else hangs off a single vertical
+ * edge. That is the whole layout, and it is why there are no cards.
+ *
+ * Colour is re-pointed through the tokens the components already resolve,
+ * because Bezier's class names are hashed and change between builds.
  */
 
 .skku {
@@ -13,125 +15,108 @@
   --skku-green-hover: #0a5c37;
   --skku-blue: #003daf;
   --skku-blue-hover: #003496;
-  /* The navy's own lightness and chroma, rotated to red. Reads at the weight
-     of the brand rather than as a stock alarm colour. */
+  /* The navy's own lightness and chroma rotated to red: it carries the weight
+     of the brand rather than reading as a stock alarm colour. */
   --skku-late: #a4123a;
-  --skku-recess: #f5f6f8;
 
-  /* Links and the one filled button are the same navy. Bezier's stock accent
-     is a violet that belongs to Channel, not to the university. */
+  --skku-rail: 72px;
+  --skku-hairline: var(--color-border-neutral);
+
+  /* One accent. Green is the structural colour — progress, completion, the
+     rule under the masthead. Navy is reserved for things you can press. */
   --color-text-accent-blue: var(--skku-blue);
   --color-icon-accent-blue: var(--skku-blue);
-
-  /* the filled primary button */
-  --color-fill-neutral-heaviest: var(--skku-blue);
-  --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
-
-  /* Lateness. Bezier's stock red is an alarm colour; at nine overdue rows a
-     column of it stops meaning anything. This one carries the weight of the
-     brand instead, and stays legible when it repeats. */
   --color-text-accent-red: var(--skku-late);
   --color-icon-accent-red: var(--skku-late);
-
-  /* anything that reads as finished */
+  --color-fill-neutral-heaviest: var(--skku-blue);
+  --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
   --color-fill-accent-green-heavier: var(--skku-green);
   --color-fill-accent-green-heavier-hovered: var(--skku-green-hover);
 }
 
 /*
  * Dark theme pairs --color-fill-neutral-heaviest with --color-text-inverse and
- * --color-icon-inverse-heavier, both of which resolve to near-black. Re-pointing
- * only the fill gave a navy button carrying near-black text and a black tick on
- * a dark fill. The pair has to move with it.
+ * --color-icon-inverse-heavier, both near-black. Re-pointing the fill alone
+ * gave a navy button carrying near-black text, so the pair moves with it.
  */
 [data-bezier-theme='dark'] .skku {
   --skku-green: #3e9e72;
   --skku-green-hover: #4aab7e;
-  --skku-blue: #2f5fd0;
-  --skku-blue-hover: #3b6bdc;
+  --skku-blue: #4d7ee0;
+  --skku-blue-hover: #5c8ae8;
   --skku-late: #f07a93;
-  --skku-recess: #1e1f22;
 
   --color-text-inverse: #ffffff;
   --color-icon-inverse-heavier: #ffffff;
 }
 
+/* The rail. Every number in the panel sits in this column. */
+.skku-rail {
+  flex: none;
+  width: var(--skku-rail);
+}
+
 /*
- * A long checklist ran off the bottom of the panel, where the actions at the
- * foot could not be reached at all. Only the rows scroll, so the progress bar
- * and the filter stay put. The height is measured from the panel rather than
- * hardcoded: the host sizes the frame, and a fixed pixel cap left dead space
- * in a tall panel and clipped a short one.
+ * Only the rows scroll, so the masthead, the calendar and the filter stay put.
+ * The height is measured from the panel: a fixed pixel cap left dead space in
+ * a tall panel and clipped a short one.
  */
 .skku-list {
-  max-height: calc(100vh - 190px);
-  min-height: 180px;
+  max-height: calc(100vh - 248px);
+  min-height: 200px;
+  padding-bottom: 56px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-/* Dates and day figures line up in a column only if the digits are one width. */
+/* Figures line up in a column only when the digits are one width. */
 .skku-tabular {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }
 
-/* One hairline between rows, inset past the time column, none after the last. */
+/* Rows are separated, not boxed. The hairline starts at the content edge so
+   the rail reads as one uninterrupted column of figures. */
 .skku-row + .skku-row {
-  border-top: 1px solid var(--color-border-neutral);
+  border-top: 1px solid var(--skku-hairline);
+}
+
+/* The masthead sits above a green rule: the one place the university's colour
+   is structural rather than decorative. */
+.skku-masthead {
+  border-bottom: 2px solid var(--skku-green);
 }
 
 /*
- * The today rule. The one saturated mark on the list, and the only element
- * that is not a row: it turns a checklist into a timeline and answers "am I
+ * The today rule. The only saturated line in the list and the only element
+ * that is not a row — it turns a checklist into a timeline and answers "am I
  * already late" before a word is read.
  */
 .skku-today {
   border-top: 1px solid var(--skku-late);
 }
 
-.skku-recess {
-  background-color: var(--skku-recess);
-}
-
 /*
- * The recovery note. Bezier's fill-accent-red-transparent resolves to a
- * zero-opacity red, so it painted nothing at all; this is the same hue as the
- * today rule at the weight a wash needs to be visible without shouting.
+ * Notes are ruled, not filled. A soft tinted rectangle is the house style of
+ * every generated dashboard; a rule carries the same meaning with no box.
  */
-.skku-recover {
-  background-color: #fdf2f4;
+.skku-note {
+  border-left: 2px solid var(--skku-hairline);
 }
 
-[data-bezier-theme='dark'] .skku-recover {
-  background-color: rgba(240, 122, 147, 0.12);
+.skku-note-late {
+  border-left-color: var(--skku-late);
 }
 
 /* Korean body text wraps badly below 150% leading. */
 .skku-prose {
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-/*
- * The time column keeps its width at every size. Narrowing it to 44px made
- * `10.19 (월)` run under the title, and the date is the column's whole point.
- */
-
-@media (prefers-reduced-motion: reduce) {
-  .skku *,
-  .skku *::before,
-  .skku *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/*
- * Calendar day markers. A day either costs the student something or it does
- * not, so there is one dot per day and never one per deadline.
- */
+/* Calendar day markers: one dot per day, never one per deadline. */
 .skku-dot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 999px;
   background-color: transparent;
 }
@@ -139,25 +124,21 @@
 .skku-dot-late {
   background-color: var(--skku-late);
 }
-
 .skku-dot-due {
   background-color: var(--skku-blue);
 }
-
 .skku-dot-done {
   background-color: var(--skku-green);
 }
 
-/* Today is a ring, so it reads even when the day also carries a deadline. */
+/* Today is a square, not a circle: the grid is made of squares. */
 .skku-cal-today {
-  border-radius: 8px;
   box-shadow: inset 0 0 0 1px var(--skku-late);
 }
 
 /*
  * The assistant, as the floating button every chat surface has taught this
- * student to look for. Fixed to the panel rather than the page: the WAM is
- * its own frame, so bottom-right here is bottom-right of the panel.
+ * student to look for. Fixed to the panel, which is its own frame.
  */
 .skku-fab {
   position: fixed;
@@ -175,27 +156,48 @@
 
   cursor: pointer;
 
-  background-color: var(--skku-blue);
+  background-color: var(--skku-green);
   border: none;
   border-radius: 999px;
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 12%),
-    0 4px 12px rgb(0 0 0 / 16%);
+  box-shadow: 0 2px 8px rgb(12 109 65 / 32%);
 
-  transition: transform 160ms ease-out;
+  transition:
+    background-color 160ms ease-out,
+    box-shadow 160ms ease-out;
 }
 
 .skku-fab:hover {
-  background-color: var(--skku-blue-hover);
-  transform: scale(1.04);
+  background-color: var(--skku-green-hover);
+  box-shadow: 0 4px 14px rgb(12 109 65 / 40%);
 }
 
 .skku-fab:focus-visible {
+  outline: 2px solid var(--skku-green);
+  outline-offset: 3px;
+}
+
+/* A bare button that still reads as pressable, for the row and section heads. */
+.skku-plain {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.skku-plain:focus-visible {
   outline: 2px solid var(--skku-blue);
   outline-offset: 2px;
 }
 
-/* The last row has to clear the button, or the button sits on top of it. */
-.skku-list {
-  padding-bottom: 56px;
+@media (prefers-reduced-motion: reduce) {
+  .skku *,
+  .skku *::before,
+  .skku *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

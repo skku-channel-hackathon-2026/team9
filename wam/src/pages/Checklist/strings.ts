@@ -57,6 +57,9 @@ export const UI = {
     ko: '지금 하면 돼요',
   },
   source: { en: 'View source', ko: '출처 확인' },
+  sourceShort: { en: 'Source', ko: '출처' },
+  askShort: { en: 'Ask', ko: '질문' },
+  calendarShort: { en: 'Add to calendar', ko: '캘린더' },
   post: { en: 'Post this to the chat', ko: '채팅에 공유하기' },
   posted: { en: 'Posted to the chat', ko: '채팅에 공유했습니다' },
   postFailed: {
@@ -75,6 +78,7 @@ export const UI = {
   showAll: { en: 'Show everything else', ko: '나머지 전체 보기' },
   showLess: { en: 'Show less', ko: '접기' },
   progress: { en: 'done', ko: '완료' },
+  progressOf: { en: 'done of', ko: '개 완료 / 전체' },
   loadFailed: {
     en: 'Could not load the checklist.',
     ko: '체크리스트를 불러오지 못했습니다.',

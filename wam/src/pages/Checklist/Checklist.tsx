@@ -25,14 +25,12 @@ import {
   type SendAsBotInput,
 } from '@tutorial/shared'
 import {
-  Avatar,
   Box,
   Button,
   Checkbox,
   Divider,
   HStack,
   Icon,
-  ProgressBar,
   SegmentedControl,
   SegmentedControlItem,
   Text,
@@ -161,9 +159,8 @@ function Row({
   const isDone = item.status === 'done'
   const label = (key: 'why' | 'bring' | 'where') => (
     <Box
-      className="skku-time"
       shrink={0}
-      width={52}
+      width={48}
     >
       <Text
         typo="13"
@@ -186,14 +183,10 @@ function Row({
         spacing={12}
       >
         {/* Where you stand, before any word of the requirement is read. */}
-        <Box
-          className="skku-time skku-tabular"
-          shrink={0}
-          width={72}
-        >
+        <Box className="skku-rail skku-tabular">
           <VStack spacing={2}>
             <Text
-              typo={dayFigure(item, language).length > 4 ? '15' : '17'}
+              typo={dayFigure(item, language).length > 4 ? '18' : '22'}
               bold
               style={{ whiteSpace: 'nowrap' }}
               color={
@@ -258,10 +251,10 @@ function Row({
 
       {open && (
         <Box
-          className="skku-recess"
-          borderRadius="8"
-          padding={12}
-          marginTop={4}
+          className="skku-note"
+          paddingLeft={12}
+          marginTop={10}
+          marginLeft={84}
         >
           <VStack spacing={12}>
             <HStack
@@ -314,10 +307,10 @@ function Row({
 
       {open && item.status === 'overdue' && item.recovery.length > 0 && (
         <Box
-          className="skku-recover"
-          borderRadius="8"
-          padding={12}
-          marginTop={8}
+          className="skku-note skku-note-late"
+          paddingLeft={12}
+          marginTop={12}
+          marginLeft={84}
         >
           <VStack spacing={6}>
             <Text
@@ -352,8 +345,9 @@ function Row({
       {open && (
         <HStack
           align="center"
-          spacing={8}
+          spacing={12}
           wrap
+          style={{ marginTop: 14, marginLeft: 84 }}
         >
           <Button
             variant="outlined"
@@ -373,7 +367,7 @@ function Row({
                 typo="12"
                 color="text-accent-blue"
               >
-                {t('addToCalendar', language)}
+                {t('calendarShort', language)}
               </Text>
             </a>
           )}
@@ -387,7 +381,7 @@ function Row({
               typo="12"
               color="text-accent-blue"
             >
-              {t('source', language)}
+              {t('sourceShort', language)}
             </Text>
           </a>
         </HStack>
@@ -853,90 +847,85 @@ function Checklist() {
       className="skku"
       spacing={12}
     >
-      {/* The panel's whole claim is that it knows who is reading it, so the
-          answers that produced this list are shown rather than implied. */}
-      <HStack
-        align="center"
-        spacing={10}
+      {/*
+        The masthead. The rail carries the count, so the very first number on
+        the screen sits in the same column as every day figure below it — the
+        grid is visible from the first line rather than asserted in a comment.
+      */}
+      <Box
+        className="skku-masthead"
+        paddingBottom={12}
       >
-        <Box shrink={0}>
-          <Avatar
-            size="36"
-            name={data.name || pick(school.name, language)}
-          />
-        </Box>
-        <VStack
-          spacing={2}
-          grow={1}
-          style={{ minWidth: 0 }}
+        <HStack
+          align="end"
+          spacing={12}
         >
-          <Text
-            typo="15"
-            bold
-            color="text-neutral"
+          <Box className="skku-rail">
+            <Text
+              className="skku-tabular"
+              typo="30"
+              bold
+              color="text-neutral"
+            >
+              {String(doneCount)}
+            </Text>
+          </Box>
+          <VStack
+            spacing={2}
+            grow={1}
+            style={{ minWidth: 0 }}
           >
-            {data.name || pick(school.name, language)}
-          </Text>
-          <Text
-            typo="12"
-            color="text-neutral-lighter"
-            style={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {[
-              t(isInternational ? 'profileIntl' : 'profileDomestic', language),
-              t(
-                living === 'dorm' ? 'profileDorm' : 'profileCommuter',
-                language
-              ),
-              pick(school.name, language),
-            ].join(' · ')}
-          </Text>
-        </VStack>
-        <Box shrink={0}>
-          <Button
-            variant="ghost"
-            semantic="secondary"
-            size="xs"
-            label={t('edit', language)}
-            onClick={() => setAsking(true)}
-          />
-        </Box>
-      </HStack>
+            <Text
+              typo="13"
+              color="text-neutral-light"
+            >
+              {language === 'ko'
+                ? `/ ${items.length} 완료`
+                : `of ${items.length} done`}
+            </Text>
+            <Text
+              typo="12"
+              color="text-neutral-lighter"
+              style={{
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {[
+                data.name,
+                t(
+                  isInternational ? 'profileIntl' : 'profileDomestic',
+                  language
+                ),
+                t(
+                  living === 'dorm' ? 'profileDorm' : 'profileCommuter',
+                  language
+                ),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </VStack>
+          <Box shrink={0}>
+            <Button
+              variant="ghost"
+              semantic="secondary"
+              size="xs"
+              label={t('edit', language)}
+              onClick={() => setAsking(true)}
+            />
+          </Box>
+        </HStack>
+      </Box>
 
-      <VStack spacing={6}>
-        <ProgressBar
-          value={items.length === 0 ? 0 : doneCount / items.length}
-          width="100%"
-        />
-        <Text
-          className="skku-tabular"
-          typo="12"
-          color="text-neutral-lighter"
-        >
-          {`${doneCount}/${items.length} ${t('progress', language)}`}
-        </Text>
-      </VStack>
-
-      {/* The month the list is describing. Collapsed by default: the list is
-          the answer, and the grid is for the student planning a week. */}
       <VStack spacing={8}>
         <HStack
           as="button"
+          className="skku-plain"
           align="center"
           justify="between"
           onClick={() => setShowCalendar((value) => !value)}
-          style={{
-            cursor: 'pointer',
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            font: 'inherit',
-            width: '100%',
-          }}
         >
           <Text
             typo="13"
