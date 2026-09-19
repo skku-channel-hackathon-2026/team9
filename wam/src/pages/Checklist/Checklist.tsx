@@ -662,6 +662,7 @@ function Checklist() {
   const [query, setQuery] = useState('')
   const [booked, setBooked] = useState<Record<string, string>>({})
   const [preset, setPreset] = useState('')
+  const [studentName, setStudentName] = useState('')
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -699,6 +700,7 @@ function Checklist() {
   useEffect(() => {
     if (data && !hydrated) {
       setArrivalDate(data.arrivalDate)
+      setStudentName(data.studentName)
       setIsInternational(data.isInternational)
       setLiving(data.living)
       setUniversity(data.university)
@@ -882,6 +884,7 @@ function Checklist() {
     void persist({
       completed,
       arrivalDate,
+      name: studentName.trim(),
       isInternational,
       living,
       university,
@@ -889,6 +892,7 @@ function Checklist() {
     })
   }, [
     arrivalDate,
+    studentName,
     completed,
     isInternational,
     living,
@@ -991,6 +995,25 @@ function Checklist() {
             </VStack>
           </HStack>
         </Box>
+
+        {/* A name first, because Desk does not tell a WAM who is reading it:
+            its data keys stop at managerId, and getManager needs a permission
+            we do not control. So we ask once and remember. */}
+        <VStack spacing={4}>
+          <Text
+            typo="13"
+            bold
+            color="text-neutral"
+          >
+            {t('nameLabel', language)}
+          </Text>
+          <input
+            value={studentName}
+            placeholder={t('namePlaceholder', language)}
+            onChange={(event) => setStudentName(event.target.value)}
+            style={DATE_INPUT_STYLE}
+          />
+        </VStack>
 
         {isInternational && (
           <VStack spacing={4}>
@@ -1175,6 +1198,29 @@ function Checklist() {
       className="skku"
       spacing={12}
     >
+      {/* Who is reading, with the mark to its left. */}
+      <HStack
+        align="center"
+        spacing={8}
+      >
+        <Box shrink={0}>
+          <img
+            src={UNICUE_MARK}
+            alt="UniCue"
+            width={20}
+            height={20}
+            style={{ display: 'block' }}
+          />
+        </Box>
+        <Text
+          typo="15"
+          bold
+          color="text-neutral"
+        >
+          {studentName || 'UniCue'}
+        </Text>
+      </HStack>
+
       {/*
         The sentence. A student opens this to find out whether they are in
         trouble, so the panel says so in words before it shows a list — and
@@ -1256,7 +1302,6 @@ function Checklist() {
             }}
           >
             {[
-              data.name,
               t(isInternational ? 'profileIntl' : 'profileDomestic', language),
               t(
                 living === 'dorm' ? 'profileDorm' : 'profileCommuter',

@@ -93,6 +93,8 @@ export const UI = {
     ko: '이 대학교는 아직 학사 일정이 등록되어 있지 않습니다. 아래 출입국 관련 항목은 전국 공통이라 그대로 적용됩니다.',
   },
   greeting: { en: 'Hello', ko: '안녕하세요' },
+  nameLabel: { en: 'What should we call you?', ko: '어떻게 부르면 될까요?' },
+  namePlaceholder: { en: 'Your name', ko: '이름' },
   all: { en: 'All', ko: '전체' },
   catImmigration: { en: 'Immigration', ko: '출입국' },
   catAcademic: { en: 'Academic', ko: '학사' },

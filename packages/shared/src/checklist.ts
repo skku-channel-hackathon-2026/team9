@@ -1502,6 +1502,15 @@ export const StoredProgressSchema = z.object({
   completed: z.array(z.string()),
   /** id -> ISO date. Neither done nor undone: an appointment is made. */
   booked: z.record(z.string()).default({}),
+  /**
+   * What to call this student.
+   *
+   * Desk does not hand the viewer's name to a WAM — its data keys are appId,
+   * channelId, managerId, chatId, chatType, chatTitle, rootMessageId,
+   * broadcast and isPrivate — and getManager returns nothing usable without a
+   * permission we do not control. So we ask, once, and remember.
+   */
+  name: z.string().default(""),
   isInternational: z.boolean().default(true),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
   university: z.string().default("skku"),
@@ -1547,6 +1556,7 @@ export const ChecklistWamArgsSchema = z.object({
   arrivalDate: z.string(),
   semesterStart: z.string(),
   today: z.string(),
+  studentName: z.string().default(""),
   /** True until this person has saved anything, so the UI can ask their date. */
   isNew: z.boolean(),
   isInternational: z.boolean(),
@@ -1586,6 +1596,7 @@ export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema> & {
  */
 export const ProgressUpdateSchema = z.object({
   booked: z.record(z.string()).optional(),
+  name: z.string().optional(),
   completed: z.array(z.string()).max(50).optional(),
   arrivalDate: z.string().optional(),
   isInternational: z.boolean().optional(),
@@ -1605,7 +1616,8 @@ export function hasProgressUpdate(update: ProgressUpdate): boolean {
     update.living !== undefined ||
     update.university !== undefined ||
     update.semester !== undefined ||
-    update.booked !== undefined
+    update.booked !== undefined ||
+    update.name !== undefined
   );
 }
 
@@ -1631,6 +1643,7 @@ export function applyProgressUpdate(
           ),
         )
       : (current.booked ?? {}),
+    name: update.name ?? current.name ?? "",
     isInternational: update.isInternational ?? current.isInternational,
     living: update.living ?? current.living,
     university: update.university ?? current.university,
@@ -1676,6 +1689,7 @@ export function defaultProgress(today: string): StoredProgress {
     semesterStart: start,
     completed: [],
     booked: {},
+    name: "",
     isInternational: true,
     living: "dorm",
     university: "skku",

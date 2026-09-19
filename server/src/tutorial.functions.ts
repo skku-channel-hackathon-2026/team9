@@ -321,7 +321,10 @@ export class TutorialFunctions {
           semester: progress.semester,
           semesterStart: progress.semesterStart,
           today,
-          name: await this.readManagerName(ctx),
+          // What they told us wins. getManager needs a permission we do not
+          // control and returns nothing usable in this channel, so it is only
+          // a fallback for someone who has not been through setup.
+          studentName: progress.name || (await this.readManagerName(ctx)) || "",
           isNew,
           canSave: hasDatabase(),
           assistantAnswer,
@@ -670,6 +673,7 @@ export class TutorialFunctions {
       semesterStart: current.semesterStart,
       completed: Array.from(new Set(input.completed)),
       booked: current.booked ?? {},
+      name: current.name ?? "",
       isInternational: input.isInternational ?? current.isInternational,
       living: current.living,
       university: current.university,
