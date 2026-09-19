@@ -297,7 +297,11 @@ export class TutorialFunctions {
               channelId: ctx.channel.id,
               groupId: chat.id,
               managerId,
-              expiresAt: Date.now() + 5 * 60 * 1000,
+              // A student reads the panel, thinks, and asks a few minutes
+              // later. Five minutes meant the permission to post into the
+              // chat had usually expired by the time they did, and the
+              // question was answered in the panel and went nowhere.
+              expiresAt: Date.now() + 60 * 60 * 1000,
             },
             appSecret,
           )

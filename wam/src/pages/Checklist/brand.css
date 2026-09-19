@@ -23,3 +23,14 @@
   --color-fill-accent-green-heavier: var(--skku-green);
   --color-fill-accent-green-heavier-hovered: var(--skku-green-hover);
 }
+
+/*
+ * The panel grows with its content and a long checklist ran off the bottom of
+ * the window, where the actions at the foot could not be reached at all. It is
+ * a fixed surface inside a chat, so it scrolls rather than grows.
+ */
+.skku {
+  max-height: 560px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
