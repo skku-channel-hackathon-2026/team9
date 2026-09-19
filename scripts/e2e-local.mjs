@@ -220,6 +220,106 @@ console.log("\nOnly what applies to you");
   );
 }
 
+console.log("\nThe calendar entry point");
+{
+  const planner = personIn("ch-e2e", `planner-${Date.now()}`);
+  await call(
+    "tutorial.saveProgress",
+    { completed: [], arrivalDate: "2026-09-01", isInternational: true },
+    planner,
+  );
+
+  const { body } = await call("extension.command.metadata.getCommands");
+  const calendar = body.result.commands.find(
+    (command) => command.name === "calendar",
+  );
+  assert.ok(calendar, "the calendar command is not published");
+  assert.equal(calendar.actionFunctionName, "tutorial.showCalendar");
+  ok("the calendar command points at tutorial.showCalendar");
+
+  const opened = await call("tutorial.showCalendar", {}, planner);
+  const args = wamArgsOf(opened);
+  assert.equal(args.view, "calendar");
+  ok("it opens the panel on the full dated view");
+  assert.equal(args.arrivalDate, "2026-09-01");
+  ok("it is the same person's saved progress, not a second checklist");
+
+  const brief = wamArgsOf(await call("tutorial.open", {}, planner));
+  assert.equal(brief.view, "brief");
+  assert.deepEqual(idsOf(brief.items), idsOf(args.items));
+  ok("both entry points show the same requirements");
+}
+
+console.log("\nAsking a question");
+{
+  const asker = personIn("ch-e2e", `asker-${Date.now()}`);
+  await call(
+    "tutorial.saveProgress",
+    { completed: [], arrivalDate: "2026-09-01", isInternational: true },
+    asker,
+  );
+
+  const visa = await call(
+    "tutorial.ask",
+    { question: "How do I extend my visa before it expires?" },
+    asker,
+  );
+  assert.equal(visa.status, 200);
+  const answer = visa.body.result;
+  assert.equal(answer.origin, "guide");
+  ok("a visa question is answered from the written guide");
+  assert.ok(
+    answer.answer.includes("체류기간 연장허가"),
+    "the answer does not name the procedure in Korean",
+  );
+  ok("the answer carries the Korean term to say at the counter");
+  assert.ok(
+    answer.sources.length > 0 && answer.sources[0].url.startsWith("https://"),
+  );
+  ok("the answer cites something the student can read themselves");
+  assert.ok(answer.followUps.length > 0);
+  ok("it offers the question they are likely to have next");
+  assert.equal(answer.askedInChat, false);
+  ok("with no chat to post into, it says so rather than pretending");
+
+  const aboutRow = await call(
+    "tutorial.ask",
+    { question: "What do I bring?", about: "arc-registration" },
+    asker,
+  );
+  assert.ok(
+    aboutRow.body.result.followUps.some((question) =>
+      question.includes("Alien Registration"),
+    ),
+    "the follow-ups ignored the row the question came from",
+  );
+  ok("a question asked from a row is answered about that row");
+
+  const unknown = await call(
+    "tutorial.ask",
+    { question: "where is the nearest library" },
+    asker,
+  );
+  assert.equal(unknown.body.result.origin, "unavailable");
+  assert.ok(unknown.body.result.answer.includes("1345"));
+  ok("an unanswerable question says so and names somewhere to go");
+
+  // Posting into the chat is best effort: a target that cannot be honoured
+  // must not cost the student the answer they asked for.
+  const badTarget = await call(
+    "tutorial.ask",
+    { question: "How do I extend my visa?", targetToken: "not-a-real-token" },
+    asker,
+  );
+  assert.equal(badTarget.status, 200);
+  assert.equal(badTarget.body.result.askedInChat, false);
+  ok("a target it cannot post to still returns the answer");
+
+  const empty = await call("tutorial.ask", { question: "" }, asker);
+  assert.ok(empty.body.error, "an empty question was accepted");
+  ok("an empty question is refused");
+}
+
 console.log("\nBad input is refused, not swallowed");
 {
   const bad = await call(

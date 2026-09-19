@@ -2,6 +2,15 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import {
   buildChecklist,
+  composeAlfQuestion,
+  composeGuideAnswer,
+  findGuide,
+  sourcesFor,
+  suggestedQuestions,
+  ASSISTANT_FUNCTIONS,
+  AssistantAnswerSchema,
+  AssistantAskInputSchema,
+  HELP,
   languageFor,
   composeSummary,
   composeQuestion,
@@ -19,6 +28,8 @@ import {
   StoredProgressSchema,
   TUTORIAL_FUNCTIONS,
   TUTORIAL_WAM_NAME,
+  type AssistantAnswer,
+  type AssistantAskInput,
   type CommandActionInput,
   type SaveProgressInput,
   type SendAsBotInput,
@@ -149,6 +160,23 @@ export class CommandExtension {
             },
           ],
         },
+        // The dated view of the same checklist, for a student who came to
+        // plan rather than to act. It opens the same panel on the same saved
+        // progress, so there is nothing extra to keep in step.
+        {
+          name: "calendar",
+          scope: "desk",
+          description: "신입생 일정: 마감일 전체 보기",
+          actionFunctionName: TUTORIAL_FUNCTIONS.showCalendar,
+          alfMode: "recommend",
+          alfDescription:
+            "Opens a new student's own deadlines as a dated list, every " +
+            "item at once rather than only what is urgent. Recommend this " +
+            "when someone asks what is coming up, what the dates are, what " +
+            "happens this month or this semester, or asks to see their " +
+            "whole schedule rather than the next thing to do.",
+          enabledByDefault: true,
+        },
         // The same checklist on the customer-facing surface, which is
         // where a student and ALF actually meet. Both become active on
         // one registration; neither changes behaviour until then.
@@ -227,6 +255,34 @@ export class TutorialFunctions {
   async open(
     @Ctx() ctx: Context,
     @Input() params: CommandActionInput,
+  ): Promise<z.infer<typeof CommandResultSchema>> {
+    return this.openPanel(ctx, params, "brief");
+  }
+
+  /**
+   * The same checklist, opened on every date at once.
+   *
+   * `/tutorial` answers "what do I have to do"; this answers "what is coming
+   * and when", which is the question a student asks while planning a term
+   * rather than while panicking about a deadline. Same data, same person,
+   * same saved progress — only the first screen differs, because sending
+   * someone to a different app to see their own dates is how they lose them.
+   */
+  @Func(TUTORIAL_FUNCTIONS.showCalendar)
+  @Description("Open the freshman checklist on the full dated view")
+  @InputSchema(CommandActionInputSchema)
+  @OutputSchema(CommandResultSchema)
+  async showCalendar(
+    @Ctx() ctx: Context,
+    @Input() params: CommandActionInput,
+  ): Promise<z.infer<typeof CommandResultSchema>> {
+    return this.openPanel(ctx, params, "calendar");
+  }
+
+  private async openPanel(
+    ctx: Context,
+    params: CommandActionInput,
+    view: "brief" | "calendar",
   ): Promise<z.infer<typeof CommandResultSchema>> {
     const chat = params.chat;
     const managerId = ctx.caller.id ?? "";
@@ -321,6 +377,7 @@ export class TutorialFunctions {
           name: await this.readManagerName(ctx),
           isNew,
           canSave: hasDatabase(),
+          view,
         },
       },
     };
@@ -453,27 +510,171 @@ export class TutorialFunctions {
       );
     }
 
-    const token = await this.tokenManager.getChannelToken({
-      channelId: ctx.channel.id,
-    });
-    try {
-      await this.nativeClient
-        .createProxyApi(token.accessToken)
-        .writeGroupMessage({
-          channelId: ctx.channel.id,
-          groupId: target.groupId,
-          dto: {
-            plainText: composeQuestion(item, languageFor(profile), today),
-            botName: "Freshman Checklist",
-          },
-        });
-    } catch {
+    if (
+      !(await this.postToGroup(
+        ctx,
+        target.groupId,
+        composeQuestion(item, languageFor(profile), today),
+      ))
+    ) {
       throw new FunctionCallError(
         "The question could not be posted",
         FunctionCallErrorCode.Internal,
         { type: "nativeCallFailed" },
       );
     }
+  }
+
+  /**
+   * Posts into the chat the panel was opened from, if that is still allowed.
+   * Returns false rather than throwing: the caller has an answer to deliver
+   * either way, and a chat that cannot be posted to is a normal situation —
+   * the panel opens outside group chats too.
+   */
+  private async tryPostToChat(
+    ctx: Context,
+    targetToken: string,
+    text: string,
+  ): Promise<boolean> {
+    const target = readTutorialTargetToken(targetToken, appSecret);
+    if (
+      !target ||
+      target.expiresAt <= Date.now() ||
+      target.channelId !== ctx.channel.id ||
+      ctx.caller.type !== "manager" ||
+      target.managerId !== ctx.caller.id
+    ) {
+      return false;
+    }
+    return this.postToGroup(ctx, target.groupId, text);
+  }
+
+  /** The app bot writing into a group. False when the call did not go through. */
+  private async postToGroup(
+    ctx: Context,
+    groupId: string,
+    text: string,
+  ): Promise<boolean> {
+    try {
+      const token = await this.tokenManager.getChannelToken({
+        channelId: ctx.channel.id,
+      });
+      await this.nativeClient
+        .createProxyApi(token.accessToken)
+        .writeGroupMessage({
+          channelId: ctx.channel.id,
+          groupId,
+          dto: { plainText: text, botName: "Freshman Checklist" },
+        });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * A question from the panel, answered twice over.
+   *
+   * The written guide comes back immediately, so the student has something
+   * true in front of them before anything else happens — it needs no chat, no
+   * AI and no network beyond this call. The same question is then handed to
+   * ALF in the conversation with this student's own dates attached, because
+   * the follow-up they will actually have ("so do I extend before or after
+   * this?") belongs in a conversation, and ALF answers it far better knowing
+   * what is already overdue than it would from the question alone.
+   *
+   * Posting is best effort on purpose. Outside a group chat there is nowhere
+   * to post, and that must not cost the student the answer they asked for.
+   */
+  @Func(ASSISTANT_FUNCTIONS.ask)
+  @Description(
+    "Answer a question about this person's checklist and pass it to ALF",
+  )
+  @InputSchema(AssistantAskInputSchema)
+  @OutputSchema(AssistantAnswerSchema)
+  async ask(
+    @Ctx() ctx: Context,
+    @Input() input: AssistantAskInput,
+  ): Promise<AssistantAnswer> {
+    const today = todayInSeoul();
+    const { progress } = await loadProgress(ctx, today);
+    const profile = {
+      isInternational: progress.isInternational,
+      living: progress.living,
+      university: progress.university,
+      semester: progress.semester,
+    };
+    const language = languageFor(profile);
+    const items = buildChecklist({ ...progress, today, profile });
+    const item = input.about
+      ? (items.find((candidate) => candidate.id === input.about) ?? null)
+      : null;
+    // The row the question was asked from is part of the question, so the
+    // guide is matched against both rather than the typed words alone.
+    const guide = findGuide(
+      item
+        ? `${input.question} ${item.title} ${item.officialKo}`
+        : input.question,
+    );
+
+    const askedInChat = input.targetToken
+      ? await this.tryPostToChat(
+          ctx,
+          input.targetToken,
+          composeAlfQuestion({
+            question: input.question,
+            item,
+            guide,
+            items,
+            profile,
+            today,
+            language,
+          }),
+        )
+      : false;
+
+    const sources = sourcesFor(guide, item, language);
+    const followUps = suggestedQuestions(language, item);
+
+    if (guide) {
+      return {
+        answer: composeGuideAnswer(guide, language),
+        origin: "guide",
+        sources,
+        followUps,
+        askedInChat,
+      };
+    }
+
+    // Nothing written covers it. Say so rather than improvise, and name the
+    // two places that can answer: the conversation, if the question got
+    // there, and the offices that are obliged to.
+    return {
+      answer:
+        language === "ko"
+          ? [
+              "이 질문에 대한 안내 자료가 아직 없습니다.",
+              askedInChat
+                ? "대화창에 질문을 남겼으니 ALF 또는 담당자가 답변할 것입니다."
+                : "",
+              `출입국 관련은 ${HELP.immigrationPhone} (외국인종합안내센터), 학사 관련은 국제처에 문의하세요.`,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          : [
+              "I do not have written guidance for that one.",
+              askedInChat
+                ? "Your question is now in the chat, where ALF or a member of staff can answer it."
+                : "",
+              `For immigration call ${HELP.immigrationPhone}; for university matters ask your international office.`,
+            ]
+              .filter(Boolean)
+              .join(" "),
+      origin: "unavailable",
+      sources,
+      followUps,
+      askedInChat,
+    };
   }
 
   @Func(CHECKLIST_FUNCTIONS.saveProgress)

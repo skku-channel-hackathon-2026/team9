@@ -1,4 +1,13 @@
-import { buildChecklist, defaultProgress } from '@tutorial/shared'
+import {
+  ASSISTANT_FUNCTIONS,
+  buildChecklist,
+  composeGuideAnswer,
+  defaultProgress,
+  findGuide,
+  sourcesFor,
+  suggestedQuestions,
+  type AssistantAnswer,
+} from '@tutorial/shared'
 
 /**
  * Stands in for the Channel host when the WAM runs on its own through
@@ -52,6 +61,9 @@ export function installDevPreview(): void {
     semester: 'first',
     name: 'Alex',
     canSave: true,
+    view: new URLSearchParams(window.location.search).has('calendar')
+      ? 'calendar'
+      : 'brief',
   })
 
   // index.html sets the page background from the host before this module runs,
@@ -65,6 +77,27 @@ export function installDevPreview(): void {
     setSize: (size) => console.info('[preview] setSize', size),
     callFunction: async ({ name, params }) => {
       console.info('[preview] callFunction', name, params)
+
+      // The asking view is answered with the same functions the server uses,
+      // so the preview shows the real guidance. There is no chat to post
+      // into outside Desk, which is exactly what askedInChat: false means.
+      if (name === ASSISTANT_FUNCTIONS.ask) {
+        const question = String(
+          (params as { question?: string }).question ?? ''
+        )
+        const guide = findGuide(question)
+        const answer: AssistantAnswer = {
+          answer: guide
+            ? composeGuideAnswer(guide, 'en')
+            : 'No written guidance for that one. Ask in the chat instead.',
+          origin: guide ? 'guide' : 'unavailable',
+          sources: sourcesFor(guide, null, 'en'),
+          followUps: suggestedQuestions('en', null),
+          askedInChat: false,
+        }
+        return answer as never
+      }
+
       const next = (params as { completed?: string[] }).completed
       if (Array.isArray(next)) {
         completed = next

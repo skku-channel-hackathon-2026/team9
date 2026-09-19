@@ -26,6 +26,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const name = useWamData('name')
   const targetToken = useWamData('targetToken')
   const canSave = useWamData('canSave')
+  const view = useWamData('view')
 
   return useMemo(() => {
     const parsed = ChecklistWamArgsSchema.safeParse({
@@ -41,6 +42,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       name,
       targetToken,
       canSave,
+      view,
     })
 
     if (parsed.success) {
@@ -73,5 +75,6 @@ export function useChecklistWamData(): ChecklistWamDataResult {
     semesterStart,
     targetToken,
     today,
+    view,
   ])
 }

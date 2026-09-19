@@ -4,6 +4,7 @@ export const TUTORIAL_WAM_NAME = "tutorial";
 
 export const TUTORIAL_FUNCTIONS = {
   open: "tutorial.open",
+  showCalendar: "tutorial.showCalendar",
   sendAsBot: "tutorial.sendAsBot",
   writeAsManager: "writeGroupMessageAsManager",
 } as const;
@@ -68,3 +69,4 @@ export type WriteGroupMessageAsManagerInput = {
 };
 
 export * from "./checklist.js";
+export * from "./assistant.js";

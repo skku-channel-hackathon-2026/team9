@@ -76,12 +76,7 @@ export const UI = {
     en: 'Could not load the checklist.',
     ko: '체크리스트를 불러오지 못했습니다.',
   },
-  ask: { en: 'Ask about this in the chat', ko: '채팅으로 물어보기' },
-  asked: { en: 'Asked in the chat', ko: '채팅에 질문했습니다' },
-  askFailed: {
-    en: 'Could not ask. Reopen the command from a group chat and try again.',
-    ko: '질문을 보내지 못했습니다. 단체 대화에서 커맨드를 다시 실행해 주세요.',
-  },
+  ask: { en: 'Ask in the chat', ko: '채팅으로 묻기' },
   university: { en: 'Which university?', ko: '어느 대학교인가요?' },
   noSchoolDates: {
     en: 'Only national immigration rules are loaded for this university. They are the same everywhere. Your own campus deadlines are not in here yet.',
@@ -98,6 +93,41 @@ export const UI = {
   demo: { en: 'DEMO', ko: '데모' },
   demoIntl: { en: 'International · Dorm', ko: '유학생 · 기숙사' },
   demoDomestic: { en: 'Domestic · Commuter', ko: '국내학생 · 통학' },
+  assistantOpen: {
+    en: 'Ask in the chat about anything on this list',
+    ko: '목록에 대해 채팅으로 물어보기',
+  },
+  assistantTitle: { en: 'Ask about your checklist', ko: '체크리스트 질문하기' },
+  assistantLead: {
+    en: 'Answered here from the official rules, and passed to ALF in the chat with your dates.',
+    ko: '공식 규정을 바탕으로 여기서 답하고, 내 일정과 함께 대화창의 ALF에게도 전달합니다.',
+  },
+  assistantEmpty: {
+    en: 'Ask anything about what you have to do — how to extend your visa, what to bring, what happens if you are late.',
+    ko: '무엇이든 물어보세요. 체류기간 연장 방법, 준비물, 기한을 놓쳤을 때 등.',
+  },
+  assistantPlaceholder: { en: 'Type your question', ko: '질문을 입력하세요' },
+  send: { en: 'Send', ko: '보내기' },
+  thinking: { en: 'Looking it up…', ko: '확인하고 있습니다…' },
+  assistantFailed: {
+    en: 'Could not send that one. Try again.',
+    ko: '질문을 처리하지 못했습니다. 다시 시도해 주세요.',
+  },
+  originGuide: {
+    en: 'From the official guidance for this procedure.',
+    ko: '해당 절차의 공식 안내를 그대로 보여드립니다.',
+  },
+  alfAnswering: {
+    en: 'Your question is in the chat with your own dates attached — ALF is answering it there.',
+    ko: '내 일정과 함께 대화창에 질문을 남겼습니다. ALF가 대화창에서 답변합니다.',
+  },
+  alfUnreachable: {
+    en: 'The panel could not pass this on, so ask ALF in the conversation directly for more.',
+    ko: '대화창으로 질문을 전달하지 못했습니다. 더 알고 싶다면 ALF에게 직접 물어보세요.',
+  },
+  you: { en: 'You', ko: '나' },
+  assistantName: { en: 'Checklist', ko: '체크리스트' },
+  backToList: { en: 'Back to my checklist', ko: '체크리스트로 돌아가기' },
   urgent: { en: 'URGENT', ko: '긴급' },
   overdueTag: { en: 'OVERDUE', ko: '기한 지남' },
   soonTag: { en: 'SOON', ko: '곧 마감' },

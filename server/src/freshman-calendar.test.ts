@@ -27,5 +27,8 @@ test("formats a chat-ready freshman calendar with explanations", () => {
   assert.match(message, /Profile: Computer Science/);
   assert.match(message, /Why: You are an international freshman/);
   assert.match(message, /Why: You live in the dormitory/);
-  assert.match(message, /Why: You are a first-semester Computer Science student/);
+  assert.match(
+    message,
+    /Why: You are a first-semester Computer Science student/,
+  );
 });

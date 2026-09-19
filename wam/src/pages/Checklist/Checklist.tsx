@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
+  ASSISTANT_FUNCTIONS,
   buildChecklist,
   calendarUrl,
   languageFor,
@@ -9,6 +10,7 @@ import {
   universityById,
   SCHOOL,
   TUTORIAL_FUNCTIONS,
+  type AssistantAnswer,
   type Language,
   type Semester,
   type ProgressUpdate,
@@ -36,6 +38,7 @@ import {
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
+import Assistant from './Assistant'
 import './brand.css'
 import { daysLabel, t } from './strings'
 
@@ -97,13 +100,12 @@ function Row({
   language,
   onToggle,
   onAsk,
-  askState,
 }: {
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
+  /** Opens the question view with this row as its subject. */
   onAsk: () => void
-  askState: 'idle' | 'sent' | 'asking' | 'failed'
 }) {
   const isDone = item.status === 'done'
   const tag = TAG[item.status]
@@ -309,14 +311,7 @@ function Row({
               variant="outlined"
               semantic="primary"
               size="xs"
-              label={
-                askState === 'sent'
-                  ? t('asked', language)
-                  : askState === 'asking'
-                    ? t('asking', language)
-                    : t('ask', language)
-              }
-              disabled={askState === 'sent' || askState === 'asking'}
+              label={t('ask', language)}
               onClick={onAsk}
             />
             {item.status !== 'done' && (
@@ -348,14 +343,6 @@ function Row({
               </Text>
             </a>
           </HStack>
-          {askState === 'failed' && (
-            <Text
-              typo="12"
-              color="text-accent-red"
-            >
-              {t('askFailed', language)}
-            </Text>
-          )}
         </VStack>
       </HStack>
     </Box>
@@ -376,10 +363,13 @@ function Checklist() {
   const [expanded, setExpanded] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
-  const [asked, setAsked] = useState<
-    Record<string, 'sent' | 'asking' | 'failed'>
-  >({})
   const [hydrated, setHydrated] = useState(false)
+  /**
+   * Which view the panel is showing. `null` is the list; a string is the
+   * question view, carrying the requirement it was opened from, or "" when it
+   * was opened from the footer and is about the list as a whole.
+   */
+  const [conversation, setConversation] = useState<string | null>(null)
 
   const { call: saveProgress } = useCallFunction<unknown>({
     appId,
@@ -388,6 +378,10 @@ function Checklist() {
   const { call: postToChat, loading: posting } = useCallFunction<void>({
     appId,
     name: TUTORIAL_FUNCTIONS.sendAsBot,
+  })
+  const { call: askAssistant } = useCallFunction<AssistantAnswer>({
+    appId,
+    name: ASSISTANT_FUNCTIONS.ask,
   })
 
   useEffect(() => {
@@ -405,6 +399,9 @@ function Checklist() {
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
       setAsking(data.isNew)
+      // `/calendar` is a request to see every date, so it opens on all of
+      // them rather than on the three that matter today.
+      setExpanded(data.view === 'calendar')
       setHydrated(true)
     }
   }, [data, hydrated])
@@ -462,23 +459,19 @@ function Checklist() {
     [completed, persist]
   )
 
-  const ask = useCallback(
-    (id: string) => async () => {
-      if (!data?.targetToken) {
-        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
-        return
-      }
-      setAsked((prev) => ({ ...prev, [id]: 'asking' }))
-      try {
-        await saveProgress({
-          input: { askAbout: id, targetToken: data.targetToken },
-        })
-        setAsked((prev) => ({ ...prev, [id]: 'sent' }))
-      } catch {
-        setAsked((prev) => ({ ...prev, [id]: 'failed' }))
-      }
-    },
-    [data, saveProgress]
+  /**
+   * The server answers against this person's stored progress rather than
+   * anything the panel sends, so only the question, the row it came from and
+   * the permission to post into the chat travel with it.
+   */
+  const askQuestion = useCallback(
+    (input: { question: string; about?: string }) =>
+      askAssistant({
+        question: input.question,
+        about: input.about,
+        targetToken: data?.targetToken,
+      }),
+    [askAssistant, data]
   )
 
   const confirm = useCallback(() => {
@@ -536,6 +529,17 @@ function Checklist() {
       <InlineBanner
         variant="error"
         content={error?.message ?? t('loadFailed', 'en')}
+      />
+    )
+  }
+
+  if (conversation !== null) {
+    return (
+      <Assistant
+        language={language}
+        item={items.find((candidate) => candidate.id === conversation) ?? null}
+        ask={askQuestion}
+        onBack={() => setConversation(null)}
       />
     )
   }
@@ -863,8 +867,7 @@ function Checklist() {
             item={item}
             language={language}
             onToggle={toggle(item.id)}
-            onAsk={() => void ask(item.id)()}
-            askState={asked[item.id] ?? 'idle'}
+            onAsk={() => setConversation(item.id)}
           />
         ))}
         {rest.map((item) => (
@@ -873,8 +876,7 @@ function Checklist() {
             item={item}
             language={language}
             onToggle={toggle(item.id)}
-            onAsk={() => void ask(item.id)()}
-            askState={asked[item.id] ?? 'idle'}
+            onAsk={() => setConversation(item.id)}
           />
         ))}
       </VStack>
@@ -904,6 +906,13 @@ function Checklist() {
 
       <Divider withoutSideIndent />
       <VStack spacing={6}>
+        <Button
+          variant="outlined"
+          semantic="secondary"
+          size="s"
+          label={t('assistantOpen', language)}
+          onClick={() => setConversation('')}
+        />
         <Button
           variant="outlined"
           semantic="primary"
