@@ -63,6 +63,7 @@ function Checklist() {
   const { setSize } = useWamSize()
   const { data, appId, error } = useChecklistWamData()
   const [arrivalDate, setArrivalDate] = useState('')
+  const [isInternational, setIsInternational] = useState(true)
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
@@ -80,6 +81,7 @@ function Checklist() {
   useEffect(() => {
     if (data && !hydrated) {
       setArrivalDate(data.arrivalDate)
+      setIsInternational(data.isInternational)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
@@ -97,13 +99,18 @@ function Checklist() {
             semesterStart: data.semesterStart,
             completed,
             today: data.today,
+            profile: { isInternational },
           })
         : [],
-    [arrivalDate, completed, data]
+    [arrivalDate, completed, data, isInternational]
   )
 
   const persist = useCallback(
-    async (nextCompleted: string[], nextArrival: string) => {
+    async (
+      nextCompleted: string[],
+      nextArrival: string,
+      nextInternational: boolean
+    ) => {
       if (!data?.canSave) {
         setSaveFailed(true)
         return
@@ -112,6 +119,7 @@ function Checklist() {
         const input: SaveProgressInput = {
           completed: nextCompleted,
           arrivalDate: nextArrival,
+          isInternational: nextInternational,
         }
         await saveProgress(input)
         setSaveFailed(false)
@@ -128,15 +136,15 @@ function Checklist() {
         ? [...completed, id]
         : completed.filter((each) => each !== id)
       setCompleted(next)
-      void persist(next, arrivalDate)
+      void persist(next, arrivalDate, isInternational)
     },
-    [arrivalDate, completed, persist]
+    [arrivalDate, completed, isInternational, persist]
   )
 
   const confirmArrival = useCallback(() => {
     setAsking(false)
-    void persist(completed, arrivalDate)
-  }, [arrivalDate, completed, persist])
+    void persist(completed, arrivalDate, isInternational)
+  }, [arrivalDate, completed, isInternational, persist])
 
   if (error || !data) {
     return (
@@ -172,6 +180,36 @@ function Checklist() {
           onChange={(event) => setArrivalDate(event.target.value)}
           style={DATE_INPUT_STYLE}
         />
+        <VStack spacing={4}>
+          <Text
+            typo="13"
+            color="text-neutral"
+          >
+            Are you an international student?
+          </Text>
+          <HStack spacing={6}>
+            <Button
+              variant={isInternational ? 'filled' : 'outlined'}
+              semantic="primary"
+              size="s"
+              label="Yes"
+              onClick={() => setIsInternational(true)}
+            />
+            <Button
+              variant={isInternational ? 'outlined' : 'filled'}
+              semantic="primary"
+              size="s"
+              label="No"
+              onClick={() => setIsInternational(false)}
+            />
+          </HStack>
+          <Text
+            typo="12"
+            color="text-neutral-lighter"
+          >
+            Immigration requirements only apply to international students.
+          </Text>
+        </VStack>
         <Button
           variant="filled"
           semantic="primary"
@@ -363,6 +401,50 @@ function Checklist() {
                     {item.bring.join(', ')}
                   </Text>
                 </HStack>
+
+                {item.status === 'overdue' && item.recovery.length > 0 && (
+                  <VStack
+                    spacing={2}
+                    paddingTop={2}
+                  >
+                    <HStack
+                      as="span"
+                      align="center"
+                      spacing={4}
+                    >
+                      <Icon
+                        source={ErrorTriangleIcon}
+                        size="12"
+                        color="icon-accent-red"
+                      />
+                      <Text
+                        as="span"
+                        typo="12"
+                        bold
+                        color="text-accent-red"
+                      >
+                        Missed it — here is how to fix it
+                      </Text>
+                    </HStack>
+                    {item.recovery.map((step, stepIndex) => (
+                      <Text
+                        key={step}
+                        typo="12"
+                        color="text-neutral-lighter"
+                      >
+                        {`${stepIndex + 1}. ${step}`}
+                      </Text>
+                    ))}
+                    {item.penalty && (
+                      <Text
+                        typo="12"
+                        color="text-accent-red"
+                      >
+                        {`If you are late: ${item.penalty}`}
+                      </Text>
+                    )}
+                  </VStack>
+                )}
 
                 <a
                   href={item.sourceUrl}

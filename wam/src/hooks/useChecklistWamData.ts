@@ -19,6 +19,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const semesterStart = useWamData('semesterStart')
   const today = useWamData('today')
   const isNew = useWamData('isNew')
+  const isInternational = useWamData('isInternational')
   const canSave = useWamData('canSave')
 
   return useMemo(() => {
@@ -28,6 +29,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       semesterStart,
       today,
       isNew,
+      isInternational,
       canSave,
     })
 
@@ -47,5 +49,14 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       appId: appId ?? '',
       error: new Error('The host did not provide a usable checklist.'),
     }
-  }, [appId, arrivalDate, canSave, isNew, items, semesterStart, today])
+  }, [
+    appId,
+    arrivalDate,
+    canSave,
+    isInternational,
+    isNew,
+    items,
+    semesterStart,
+    today,
+  ])
 }

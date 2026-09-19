@@ -6,6 +6,9 @@ export type RequirementScope = "immigration" | "academic" | "life";
 /** What a deadline is counted from. */
 export type RequirementAnchor = "arrival" | "semester";
 
+/** Who a requirement actually applies to, so nobody reads irrelevant rows. */
+export type RequirementAudience = "all" | "international" | "domestic";
+
 export interface Requirement {
   id: string;
   title: string;
@@ -20,8 +23,16 @@ export interface Requirement {
   fee?: string;
   /** Official page this rule comes from, shown as a citation. */
   sourceUrl: string;
-  /** National rules are verified law; seeded rules are demo placeholders. */
+  /** National rules are verified law; school rules vary per university. */
   national: boolean;
+  audience: RequirementAudience;
+  /**
+   * What to do once this has already been missed. Telling a student they are
+   * late without telling them how to fix it is worse than saying nothing.
+   */
+  recovery: string[];
+  /** What being late actually costs, when that is a published figure. */
+  penalty?: string;
 }
 
 /**
@@ -48,6 +59,8 @@ export const REQUIREMENTS: Requirement[] = [
     sourceUrl:
       "https://yiec.yonsei.ac.kr/yiec_en/info/foreigners_registration.do",
     national: true,
+    audience: "international",
+    recovery: [],
   },
   {
     id: "enrolment-certificate",
@@ -60,6 +73,8 @@ export const REQUIREMENTS: Requirement[] = [
     where: "International office or the certificate kiosk",
     sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
     national: false,
+    audience: "all",
+    recovery: [],
   },
   {
     id: "address-report",
@@ -72,6 +87,8 @@ export const REQUIREMENTS: Requirement[] = [
     where: "Immigration office or the local district office",
     sourceUrl: "https://www.junggu.seoul.kr/english/content.do?cmsid=14873",
     national: true,
+    audience: "international",
+    recovery: [],
   },
   {
     id: "health-insurance",
@@ -84,6 +101,8 @@ export const REQUIREMENTS: Requirement[] = [
     where: "NHIS branch office",
     sourceUrl: "https://www.junggu.seoul.kr/english/content.do?cmsid=14873",
     national: true,
+    audience: "international",
+    recovery: [],
   },
   {
     id: "tuition-payment",
@@ -96,6 +115,8 @@ export const REQUIREMENTS: Requirement[] = [
     where: "Designated bank or the student portal",
     sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
     national: false,
+    audience: "all",
+    recovery: [],
   },
   {
     id: "course-withdrawal",
@@ -108,6 +129,8 @@ export const REQUIREMENTS: Requirement[] = [
     where: "Student portal",
     sourceUrl: "https://neweng.cau.ac.kr/cms/FR_CON/index.do?MENU_ID=460",
     national: false,
+    audience: "all",
+    recovery: [],
   },
 ];
 
@@ -124,6 +147,8 @@ export interface RequirementState {
   fee?: string;
   sourceUrl: string;
   national: boolean;
+  recovery: string[];
+  penalty?: string;
   /** ISO date (YYYY-MM-DD) this is due. */
   dueDate: string;
   /** Negative once the due date has passed. */
@@ -161,6 +186,26 @@ export function statusFor(daysLeft: number, done: boolean): RequirementStatus {
   return "later";
 }
 
+/** The few answers that change which requirements apply. */
+export interface StudentProfile {
+  /** Immigration requirements only apply to international students. */
+  isInternational: boolean;
+}
+
+export const StudentProfileSchema = z.object({
+  isInternational: z.boolean(),
+});
+
+export function appliesTo(
+  requirement: Requirement,
+  profile: StudentProfile,
+): boolean {
+  if (requirement.audience === "all") return true;
+  return requirement.audience === "international"
+    ? profile.isInternational
+    : !profile.isInternational;
+}
+
 export interface ChecklistInput {
   /** The student's arrival date, YYYY-MM-DD. */
   arrivalDate: string;
@@ -170,6 +215,8 @@ export interface ChecklistInput {
   completed: string[];
   /** Today, YYYY-MM-DD. Passed in so the result is deterministic to test. */
   today: string;
+  /** Omitted means treat every requirement as applicable. */
+  profile?: StudentProfile;
 }
 
 /**
@@ -184,7 +231,12 @@ export function buildChecklist(input: ChecklistInput): RequirementState[] {
 
   const completed = new Set(input.completed);
 
-  const states = REQUIREMENTS.map((requirement) => {
+  const profile = input.profile;
+  const applicable = profile
+    ? REQUIREMENTS.filter((requirement) => appliesTo(requirement, profile))
+    : REQUIREMENTS;
+
+  const states = applicable.map((requirement) => {
     const anchor = requirement.anchor === "arrival" ? arrival : semester;
     const due = addDays(anchor, requirement.dueWithinDays);
     const daysLeft = daysBetween(today, due);
@@ -199,6 +251,8 @@ export function buildChecklist(input: ChecklistInput): RequirementState[] {
       fee: requirement.fee,
       sourceUrl: requirement.sourceUrl,
       national: requirement.national,
+      recovery: requirement.recovery,
+      penalty: requirement.penalty,
       dueDate: toIsoDate(due),
       daysLeft,
       status: statusFor(daysLeft, done),
@@ -222,6 +276,7 @@ export const StoredProgressSchema = z.object({
   arrivalDate: z.string(),
   semesterStart: z.string(),
   completed: z.array(z.string()),
+  isInternational: z.boolean().default(true),
 });
 
 export type StoredProgress = z.infer<typeof StoredProgressSchema>;
@@ -236,6 +291,8 @@ export const RequirementStateSchema = z.object({
   fee: z.string().optional(),
   sourceUrl: z.string(),
   national: z.boolean(),
+  recovery: z.array(z.string()),
+  penalty: z.string().optional(),
   dueDate: z.string(),
   daysLeft: z.number(),
   status: z.enum(["done", "overdue", "urgent", "soon", "later"]),
@@ -249,6 +306,7 @@ export const ChecklistWamArgsSchema = z.object({
   today: z.string(),
   /** True until this person has saved anything, so the UI can ask their date. */
   isNew: z.boolean(),
+  isInternational: z.boolean(),
   /** False when D1 is unavailable, so the UI can explain why ticks won't stick. */
   canSave: z.boolean(),
 });
@@ -258,6 +316,7 @@ export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;
 export const SaveProgressInputSchema = z.object({
   completed: z.array(z.string()).max(50),
   arrivalDate: z.string().optional(),
+  isInternational: z.boolean().optional(),
 });
 
 export type SaveProgressInput = z.infer<typeof SaveProgressInputSchema>;
@@ -285,5 +344,10 @@ export function defaultProgress(today: string): StoredProgress {
     parsed === null
       ? today
       : toIsoDate(addDays(parsed, -ASSUMED_DAYS_SINCE_ARRIVAL));
-  return { arrivalDate: start, semesterStart: start, completed: [] };
+  return {
+    arrivalDate: start,
+    semesterStart: start,
+    completed: [],
+    isInternational: true,
+  };
 }

@@ -163,8 +163,13 @@ export class TutorialFunctions {
         name: TUTORIAL_WAM_NAME,
         wamArgs: {
           ...tutorialArgs,
-          items: buildChecklist({ ...progress, today }),
+          items: buildChecklist({
+            ...progress,
+            today,
+            profile: { isInternational: progress.isInternational },
+          }),
           arrivalDate: progress.arrivalDate,
+          isInternational: progress.isInternational,
           semesterStart: progress.semesterStart,
           today,
           isNew,
@@ -245,6 +250,7 @@ export class TutorialFunctions {
       arrivalDate: input.arrivalDate ?? current.arrivalDate,
       semesterStart: current.semesterStart,
       completed: Array.from(new Set(input.completed)),
+      isInternational: input.isInternational ?? current.isInternational,
     };
 
     if (!(await writeRecord(recordIdFor(ctx), next))) {

@@ -120,3 +120,54 @@ test("a malformed today still yields a usable default", () => {
   assert.equal(progress.arrivalDate, "nope");
   assert.deepEqual(progress.completed, []);
 });
+
+test("a domestic student is not shown immigration requirements", () => {
+  const items = buildChecklist({
+    ...BASE,
+    today: "2026-03-02",
+    profile: { isInternational: false },
+  });
+  assert.ok(items.length > 0);
+  assert.ok(
+    items.every((item) => item.scope !== "immigration"),
+    "immigration rows leaked to a domestic student",
+  );
+});
+
+test("an international student sees strictly more than a domestic one", () => {
+  const international = buildChecklist({
+    ...BASE,
+    today: "2026-03-02",
+    profile: { isInternational: true },
+  });
+  const domestic = buildChecklist({
+    ...BASE,
+    today: "2026-03-02",
+    profile: { isInternational: false },
+  });
+  assert.ok(international.length > domestic.length);
+  const domesticIds = new Set(domestic.map((item) => item.id));
+  for (const id of domesticIds) {
+    assert.ok(
+      international.some((item) => item.id === id),
+      `${id} should apply to both audiences`,
+    );
+  }
+});
+
+test("omitting a profile keeps every requirement", () => {
+  const all = buildChecklist({ ...BASE, today: "2026-03-02" });
+  const international = buildChecklist({
+    ...BASE,
+    today: "2026-03-02",
+    profile: { isInternational: true },
+  });
+  assert.equal(all.length, international.length);
+});
+
+test("every requirement carries recovery steps for being late", () => {
+  const items = buildChecklist({ ...BASE, today: "2026-03-02" });
+  for (const item of items) {
+    assert.ok(Array.isArray(item.recovery), `${item.id} has no recovery array`);
+  }
+});

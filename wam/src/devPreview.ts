@@ -31,11 +31,17 @@ export function installDevPreview(): void {
     chatTitle: 'app-dev-verification',
     broadcast: false,
     message: '',
-    items: buildChecklist({ ...defaultProgress(today), completed, today }),
+    items: buildChecklist({
+      ...defaultProgress(today),
+      completed,
+      today,
+      profile: { isInternational: true },
+    }),
     arrivalDate: defaultProgress(today).arrivalDate,
     semesterStart: defaultProgress(today).semesterStart,
     today,
     isNew: new URLSearchParams(window.location.search).has('new'),
+    isInternational: true,
     canSave: true,
   })
 
