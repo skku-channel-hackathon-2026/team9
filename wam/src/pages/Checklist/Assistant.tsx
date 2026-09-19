@@ -16,6 +16,8 @@ import {
 import { SendIcon } from '@channel.io/bezier-icons'
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
+import { UNICUE_MARK } from '../../logo'
+
 import './brand.css'
 import { t } from './strings'
 
@@ -238,11 +240,29 @@ function Assistant({
               </Box>
             </HStack>
           ) : (
-            <Box
+            <VStack
               key={`answer-${index}`}
-              className="skku-answer"
-              paddingLeft={14}
+              spacing={8}
             >
+              <HStack
+                align="center"
+                spacing={8}
+              >
+                <img
+                  src={UNICUE_MARK}
+                  alt=""
+                  width={20}
+                  height={20}
+                  style={{ display: 'block' }}
+                />
+                <Text
+                  typo="13"
+                  bold
+                  color="text-neutral-light"
+                >
+                  UniCue
+                </Text>
+              </HStack>
               <VStack spacing={8}>
                 <Answer text={entry.text} />
                 {entry.sources && entry.sources.length > 0 && (
@@ -288,7 +308,7 @@ function Assistant({
                     .join(' ')}
                 </Text>
               </VStack>
-            </Box>
+            </VStack>
           )
         )}
 

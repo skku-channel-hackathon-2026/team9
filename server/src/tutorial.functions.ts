@@ -63,6 +63,7 @@ import {
   readRecord,
   writeRecord,
 } from "./records.js";
+import { askClaude, canAskClaude } from "./claude.js";
 
 const tutorialMessage = "This is a test message sent by a manager.";
 
@@ -411,8 +412,18 @@ export class TutorialFunctions {
       const result = await this.nativeClient
         .createProxyApi(token.accessToken)
         .getManager({ channelId: ctx.channel.id, managerId });
-      const name = result?.manager?.name;
-      return typeof name === "string" && name.length > 0 ? name : undefined;
+      // NativeManager is an opaque model — the display name is not guaranteed
+      // to be on `name`, and reading only that left the greeting blank in
+      // production. Take the first field that actually carries one.
+      const manager = result?.manager as Record<string, unknown> | undefined;
+      for (const key of ["name", "displayName", "username", "email"]) {
+        const value = manager?.[key];
+        if (typeof value === "string" && value.trim().length > 0) {
+          // An email is a fallback, not a name: use the part before the @.
+          return key === "email" ? value.split("@")[0] : value.trim();
+        }
+      }
+      return undefined;
     } catch {
       return undefined;
     }
@@ -560,11 +571,25 @@ export class TutorialFunctions {
     // guide is matched against both rather than the typed words alone.
     const guide = findGuideFor(input.question, item);
 
-    const askedInChat = input.targetToken
-      ? await this.tryPostToChat(
-          ctx,
-          input.targetToken,
-          composeAlfQuestion({
+    // With a key, UniCue answers the question itself and posts the answer.
+    // Without one, it posts the question with the student's dates attached and
+    // ALF answers it. The six written guides cover six procedures out of
+    // thirty-six, so this is what closes that gap — but nothing depends on it:
+    // a missing key, a rate limit or a timeout all fall back to the question.
+    const answered = canAskClaude()
+      ? await askClaude({
+          question: input.question,
+          item,
+          items,
+          profile,
+          today,
+          language,
+        })
+      : null;
+
+    const forChat =
+      answered === null
+        ? composeAlfQuestion({
             question: input.question,
             item,
             guide,
@@ -572,8 +597,11 @@ export class TutorialFunctions {
             profile,
             today,
             language,
-          }),
-        )
+          })
+        : `❓ ${input.question.trim()}\n\n${answered}`;
+
+    const askedInChat = input.targetToken
+      ? await this.tryPostToChat(ctx, input.targetToken, forChat)
       : false;
 
     const sources = sourcesFor(guide, item, language);

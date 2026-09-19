@@ -1246,17 +1246,6 @@ function Checklist() {
           justify="between"
           spacing={8}
         >
-          {/* The mark rides on this line rather than taking a band of its
-              own: the panel has 600px and a logo is not a deadline. */}
-          <Box shrink={0}>
-            <img
-              src={UNICUE_MARK}
-              alt="UniCue"
-              width={18}
-              height={18}
-              style={{ display: 'block' }}
-            />
-          </Box>
           <Text
             typo="13"
             color="text-neutral-lighter"
