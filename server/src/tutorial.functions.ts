@@ -382,7 +382,7 @@ export class TutorialFunctions {
         broadcast: input.broadcast,
         dto: {
           plainText: summary,
-          botName: "Freshman Checklist",
+          botName: "UniCue",
         },
       });
     } catch {
@@ -511,7 +511,7 @@ export class TutorialFunctions {
         .writeGroupMessage({
           channelId: ctx.channel.id,
           groupId,
-          dto: { plainText: text, botName: "Freshman Checklist" },
+          dto: { plainText: text, botName: "UniCue" },
         });
       return true;
     } catch {
