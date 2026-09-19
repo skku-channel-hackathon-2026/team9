@@ -446,6 +446,134 @@ export const REQUIREMENTS: Requirement[] = [
       ],
     },
   },
+
+  // --- SKKU dormitory, 2026 Fall (dorm.skku.edu notices) ---
+  {
+    id: "dorm-orientation",
+    title: {
+      en: "Complete the dormitory orientation and fire-safety course",
+      ko: "기숙사 온라인 오리엔테이션·소방안전교육 이수",
+    },
+    officialKo: "기숙사 온라인 오리엔테이션",
+    scope: "life",
+    anchor: "fixed",
+    dueDate: "2026-09-14",
+    bring: { en: ["Your Kingo ID"], ko: ["킹고 ID"] },
+    where: { en: "i-Campus, online", ko: "i-Campus 온라인" },
+    why: {
+      en: "Not completing it is a penalty-point offence, and points accumulate towards losing your room.",
+      ko: "미이수 시 벌점이 부과되며, 벌점이 쌓이면 입사 자격에 영향을 줍니다.",
+    },
+    sourceUrl: "https://dorm.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "dorm",
+    penalty: { en: "2 penalty points (벌점 2점)", ko: "벌점 2점" },
+    recovery: {
+      en: [
+        "Contact your dormitory office and ask whether the i-Campus course can still be opened for you",
+        "Seoul 명륜학사 02-760-0163, Suwon 봉룡학사 031-290-5026",
+        "Ask what your current penalty total is — 10, 15 and 20 points each carry a separate consequence",
+      ],
+      ko: [
+        "기숙사 행정실에 연락해 i-Campus 강좌를 다시 열어줄 수 있는지 문의하세요",
+        "명륜학사 02-760-0163, 봉룡학사 031-290-5026",
+        "현재 누적 벌점을 확인하세요. 10점·15점·20점마다 별도의 제재가 있습니다",
+      ],
+    },
+  },
+  {
+    id: "dorm-application",
+    title: {
+      en: "Apply for a dormitory room",
+      ko: "기숙사 입사 신청",
+    },
+    officialKo: "기숙사 정규 입사 신청",
+    scope: "life",
+    anchor: "fixed",
+    dueDate: "2026-08-09",
+    bring: {
+      en: [
+        "Kingo ID, on a PC — the application does not work on a phone",
+        "Your registered home address entered in IT4U",
+        "A previous-semester GPA of 1.75 or above",
+      ],
+      ko: [
+        "킹고 ID, PC에서만 가능 (모바일 불가)",
+        "IT4U에 입력한 주민등록상 주소",
+        "직전 학기 평점 평균 1.75 이상",
+      ],
+    },
+    where: {
+      en: "GLS → 신청/자격관리 → 기숙사신청",
+      ko: "GLS → 신청/자격관리 → 기숙사신청",
+    },
+    why: {
+      en: "Rooms are only assigned through these rounds — you cannot apply at the dormitory office.",
+      ko: "기숙사 방은 신청 기간에만 배정되며 행정실 방문 신청은 불가합니다.",
+    },
+    sourceUrl: "https://dorm.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "dorm",
+    recovery: {
+      en: [
+        "The regular rounds are over, but the vacancy waitlist (공석대기신청) on GLS is still open — Suwon's runs to 1 December",
+        "You may pick only one dormitory and it cannot be changed, so choose the one you would actually accept",
+        "When your number comes up you are notified by SMS and must pay by the next day, so keep your phone number current in GLS",
+      ],
+      ko: [
+        "정규 모집은 끝났지만 GLS 공석대기신청은 아직 열려 있습니다. 봉룡학사는 12월 1일까지입니다",
+        "희망 기숙사는 한 곳만 선택할 수 있고 수정이 불가하므로 실제로 입사할 곳을 고르세요",
+        "대기 순번이 되면 문자로 안내되고 다음 날까지 납부해야 하므로 GLS 연락처를 최신으로 유지하세요",
+      ],
+    },
+  },
+  {
+    id: "dorm-tb-certificate",
+    title: {
+      en: "Submit your tuberculosis test result",
+      ko: "결핵검진결과서 제출",
+    },
+    officialKo: "결핵검진결과서",
+    scope: "life",
+    anchor: "fixed",
+    dueDate: "2026-08-22",
+    bring: {
+      en: [
+        "Chest X-ray result issued after 1 June 2026",
+        "Your student ID number and room number written on it",
+      ],
+      ko: [
+        "2026년 6월 1일 이후 발급된 흉부 엑스레이 결과서",
+        "결과서에 학번과 호실 기재",
+      ],
+    },
+    where: {
+      en: "Your dormitory information desk, at check-in",
+      ko: "입사 당일 기숙사 안내데스크",
+    },
+    why: {
+      en: "Without it you are not admitted to the building — this one is absolute.",
+      ko: "제출하지 않으면 입사 자체가 불가합니다.",
+    },
+    sourceUrl: "https://dorm.skku.edu/",
+    national: false,
+    audience: "all",
+    living: "dorm",
+    recovery: {
+      en: [
+        "Any hospital or public health centre (보건소) can issue a chest X-ray result, usually same day",
+        "It must be dated after 1 June 2026 — an older one will not be accepted",
+        "Take it to the dormitory desk; they are staffed outside office hours",
+      ],
+      ko: [
+        "병원이나 보건소에서 흉부 엑스레이 결과서를 당일 발급받을 수 있습니다",
+        "2026년 6월 1일 이후 발급분이어야 하며, 이전 서류는 인정되지 않습니다",
+        "기숙사 안내데스크는 업무시간 외에도 운영되므로 바로 제출하세요",
+      ],
+    },
+  },
 ];
 
 export type RequirementStatus =
