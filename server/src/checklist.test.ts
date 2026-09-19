@@ -127,7 +127,12 @@ test("a domestic student is not shown immigration requirements", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: false,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   assert.ok(items.length > 0);
   assert.ok(
@@ -140,12 +145,22 @@ test("each audience sees requirements the other does not", () => {
   const international = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const domestic = buildChecklist({
     ...BASE,
     today: "2026-03-02",
-    profile: { isInternational: false, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: false,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const intlIds = new Set(international.map((item) => item.id));
   const domesticIds = new Set(domestic.map((item) => item.id));
@@ -171,7 +186,12 @@ test("omitting a profile filters nothing out", () => {
       const filtered = buildChecklist({
         ...BASE,
         today: "2026-03-02",
-        profile: { isInternational, living, university: "skku" },
+        profile: {
+          isInternational,
+          living,
+          university: "skku",
+          semester: "first",
+        },
       });
       assert.ok(
         filtered.length <= all.length,
@@ -254,7 +274,12 @@ test("a domestic student reads the checklist in Korean", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: false,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const withdrawal = items.find((item) => item.id === "course-withdrawal");
   assert.ok(withdrawal);
@@ -273,7 +298,12 @@ test("an international student reads the same requirement in English", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const withdrawal = items.find((item) => item.id === "course-withdrawal");
   assert.ok(withdrawal);
@@ -291,6 +321,7 @@ test("the Korean name is kept in both languages, to show at an office", () => {
         isInternational: language,
         living: "dorm",
         university: "skku",
+        semester: "first",
       },
     });
     for (const item of items) {
@@ -307,7 +338,12 @@ test("every requirement explains why it applies, in both languages", () => {
     const items = buildChecklist({
       ...BASE,
       today: "2026-09-19",
-      profile: { isInternational, living: "dorm", university: "skku" },
+      profile: {
+        isInternational,
+        living: "dorm",
+        university: "skku",
+        semester: "first",
+      },
     });
     for (const item of items) {
       assert.ok(item.why.length > 10, `${item.id} has no explanation`);
@@ -319,7 +355,12 @@ test("a question carries the Korean term, the date and the source", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const overdue = items.find((item) => item.status === "overdue");
   assert.ok(overdue);
@@ -334,7 +375,12 @@ test("a question about something still ahead asks how to prepare", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const ahead = items.find((item) => item.daysLeft > 0);
   assert.ok(ahead);
@@ -347,7 +393,12 @@ test("a Korean student's question is written in Korean", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: false,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const first = items[0];
   assert.ok(first);
@@ -360,12 +411,22 @@ test("a university whose calendar is not loaded still gets the national rules", 
   const skku = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const elsewhere = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "yonsei" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "yonsei",
+      semester: "first",
+    },
   });
 
   assert.ok(
@@ -386,7 +447,12 @@ test("an unknown university id falls back rather than breaking", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "nonsense" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "nonsense",
+      semester: "first",
+    },
   });
   assert.ok(items.length > 0);
 });
@@ -395,7 +461,12 @@ test("the calendar link carries the date, the documents and the source", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   const arc = items.find((item) => item.id === "arc-registration");
   assert.ok(arc);
@@ -424,7 +495,12 @@ test("a domestic student sees the national scholarship deadline", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "commuter", university: "skku" },
+    profile: {
+      isInternational: false,
+      living: "commuter",
+      university: "skku",
+      semester: "first",
+    },
   });
   const scholarship = items.find((item) => item.id === "national-scholarship");
   assert.ok(
@@ -439,7 +515,12 @@ test("the national scholarship applies at universities we have no calendar for",
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: false, living: "dorm", university: "yonsei" },
+    profile: {
+      isInternational: false,
+      living: "dorm",
+      university: "yonsei",
+      semester: "first",
+    },
   });
   assert.ok(items.some((item) => item.id === "national-scholarship"));
 });
@@ -448,7 +529,12 @@ test("an international student is not shown the domestic-only items", () => {
   const items = buildChecklist({
     ...BASE,
     today: "2026-09-19",
-    profile: { isInternational: true, living: "dorm", university: "skku" },
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "first",
+    },
   });
   for (const id of [
     "national-scholarship",
@@ -458,6 +544,55 @@ test("an international student is not shown the domestic-only items", () => {
     assert.ok(
       !items.some((item) => item.id === id),
       `${id} was shown to an international student`,
+    );
+  }
+});
+
+test("first-arrival tasks drop away after the first semester", () => {
+  const base = {
+    ...BASE,
+    today: "2026-09-19",
+    profile: {
+      isInternational: true,
+      living: "dorm" as const,
+      university: "skku",
+      semester: "first" as const,
+    },
+  };
+  const first = buildChecklist(base);
+  const later = buildChecklist({
+    ...base,
+    profile: { ...base.profile, semester: "later" as const },
+  });
+
+  assert.ok(first.length > later.length, "the list did not shrink");
+  for (const id of ["enrolment-certificate", "dorm-application"]) {
+    assert.ok(
+      first.some((item) => item.id === id),
+      `${id} should be there in a first semester`,
+    );
+    assert.ok(
+      !later.some((item) => item.id === id),
+      `${id} is still shown to a third-semester student`,
+    );
+  }
+});
+
+test("recurring deadlines survive into later semesters", () => {
+  const later = buildChecklist({
+    ...BASE,
+    today: "2026-09-19",
+    profile: {
+      isInternational: true,
+      living: "dorm",
+      university: "skku",
+      semester: "later",
+    },
+  });
+  for (const id of ["course-withdrawal", "tuition-payment"]) {
+    assert.ok(
+      later.some((item) => item.id === id),
+      `${id} applies every semester and should not have been dropped`,
     );
   }
 });

@@ -10,6 +10,7 @@ import {
   SCHOOL,
   TUTORIAL_FUNCTIONS,
   type Language,
+  type Semester,
   type ProgressUpdate,
   type RequirementState,
   type SendAsBotInput,
@@ -367,6 +368,7 @@ function Checklist() {
   const [isInternational, setIsInternational] = useState(true)
   const [living, setLiving] = useState<'dorm' | 'commuter'>('dorm')
   const [university, setUniversity] = useState('skku')
+  const [semester, setSemester] = useState<Semester>('first')
   const [category, setCategory] = useState<string>('all')
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
@@ -397,6 +399,7 @@ function Checklist() {
       setIsInternational(data.isInternational)
       setLiving(data.living)
       setUniversity(data.university)
+      setSemester(data.semester)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
@@ -405,7 +408,7 @@ function Checklist() {
     }
   }, [data, hydrated])
 
-  const profile = { isInternational, living, university }
+  const profile = { isInternational, living, university, semester }
   const language: Language = languageFor(profile)
   const school = universityById(university)
 
@@ -417,10 +420,18 @@ function Checklist() {
             semesterStart: data.semesterStart,
             completed,
             today: data.today,
-            profile: { isInternational, living, university },
+            profile: { isInternational, living, university, semester },
           })
         : [],
-    [arrivalDate, completed, data, isInternational, living, university]
+    [
+      arrivalDate,
+      completed,
+      data,
+      isInternational,
+      living,
+      semester,
+      university,
+    ]
   )
 
   const persist = useCallback(
@@ -477,8 +488,17 @@ function Checklist() {
       isInternational,
       living,
       university,
+      semester,
     })
-  }, [arrivalDate, completed, isInternational, living, persist, university])
+  }, [
+    arrivalDate,
+    completed,
+    isInternational,
+    living,
+    persist,
+    semester,
+    university,
+  ])
 
   const startOver = useCallback(() => {
     setCompleted([])
@@ -489,8 +509,9 @@ function Checklist() {
       isInternational,
       living,
       university,
+      semester,
     })
-  }, [arrivalDate, isInternational, living, persist, university])
+  }, [arrivalDate, isInternational, living, persist, semester, university])
 
   const share = useCallback(async () => {
     if (!data?.targetToken) {
@@ -582,16 +603,57 @@ function Checklist() {
             bold
             color="text-neutral"
           >
-            {t('arrived', language)}
+            {t('semester', language)}
           </Text>
-          <input
-            type="date"
-            value={arrivalDate}
-            max={data.today}
-            onChange={(event) => setArrivalDate(event.target.value)}
-            style={DATE_INPUT_STYLE}
-          />
+          <HStack spacing={6}>
+            <Button
+              variant={semester === 'first' ? 'filled' : 'outlined'}
+              semantic="primary"
+              size="s"
+              label={t('semFirst', language)}
+              onClick={() => setSemester('first')}
+            />
+            <Button
+              variant={semester === 'second' ? 'filled' : 'outlined'}
+              semantic="primary"
+              size="s"
+              label={t('semSecond', language)}
+              onClick={() => setSemester('second')}
+            />
+            <Button
+              variant={semester === 'later' ? 'filled' : 'outlined'}
+              semantic="primary"
+              size="s"
+              label={t('semLater', language)}
+              onClick={() => setSemester('later')}
+            />
+          </HStack>
         </VStack>
+
+        {isInternational && (
+          <VStack spacing={4}>
+            <Text
+              typo="13"
+              bold
+              color="text-neutral"
+            >
+              {t('arrived', language)}
+            </Text>
+            <input
+              type="date"
+              value={arrivalDate}
+              max={data.today}
+              onChange={(event) => setArrivalDate(event.target.value)}
+              style={DATE_INPUT_STYLE}
+            />
+            <Text
+              typo="12"
+              color="text-neutral-lighter"
+            >
+              {t('arrivedWhy', language)}
+            </Text>
+          </VStack>
+        )}
 
         <VStack spacing={4}>
           <Text
@@ -649,7 +711,7 @@ function Checklist() {
           variant="filled"
           semantic="primary"
           label={t('show', language)}
-          disabled={!arrivalDate}
+          disabled={isInternational && !arrivalDate}
           onClick={confirm}
         />
         <Button
