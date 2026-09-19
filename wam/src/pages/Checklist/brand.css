@@ -3,10 +3,9 @@
  * components already resolve rather than by selecting on class names, which
  * are hashed and change between builds.
  *
- * Only the two places a brand colour belongs are changed: the primary action,
- * and the state that means something is finished. Text and icon accents are
- * deliberately left alone — both brand colours are dark, and on the dark theme
- * they would fail against the background they sit on.
+ * Colour appears in three places on the list and nowhere else: the progress
+ * fill (green), the today rule and the day figures above it (late), and the
+ * one filled button per screen (navy). Everything else is ink on a surface.
  */
 
 .skku {
@@ -14,10 +13,25 @@
   --skku-green-hover: #0a5c37;
   --skku-blue: #003daf;
   --skku-blue-hover: #003496;
+  /* The navy's own lightness and chroma, rotated to red. Reads at the weight
+     of the brand rather than as a stock alarm colour. */
+  --skku-late: #a4123a;
+  --skku-recess: #f5f6f8;
+
+  /* Links and the one filled button are the same navy. Bezier's stock accent
+     is a violet that belongs to Channel, not to the university. */
+  --color-text-accent-blue: var(--skku-blue);
+  --color-icon-accent-blue: var(--skku-blue);
 
   /* the filled primary button */
   --color-fill-neutral-heaviest: var(--skku-blue);
   --color-fill-neutral-heaviest-hovered: var(--skku-blue-hover);
+
+  /* Lateness. Bezier's stock red is an alarm colour; at nine overdue rows a
+     column of it stops meaning anything. This one carries the weight of the
+     brand instead, and stays legible when it repeats. */
+  --color-text-accent-red: var(--skku-late);
+  --color-icon-accent-red: var(--skku-late);
 
   /* anything that reads as finished */
   --color-fill-accent-green-heavier: var(--skku-green);
@@ -25,12 +39,88 @@
 }
 
 /*
- * The panel grows with its content and a long checklist ran off the bottom of
- * the window, where the actions at the foot could not be reached at all. It is
- * a fixed surface inside a chat, so it scrolls rather than grows.
+ * Dark theme pairs --color-fill-neutral-heaviest with --color-text-inverse and
+ * --color-icon-inverse-heavier, both of which resolve to near-black. Re-pointing
+ * only the fill gave a navy button carrying near-black text and a black tick on
+ * a dark fill. The pair has to move with it.
  */
-.skku {
-  max-height: 560px;
+[data-bezier-theme='dark'] .skku {
+  --skku-green: #3e9e72;
+  --skku-green-hover: #4aab7e;
+  --skku-blue: #2f5fd0;
+  --skku-blue-hover: #3b6bdc;
+  --skku-late: #f07a93;
+  --skku-recess: #1e1f22;
+
+  --color-text-inverse: #ffffff;
+  --color-icon-inverse-heavier: #ffffff;
+}
+
+/*
+ * A long checklist ran off the bottom of the panel, where the actions at the
+ * foot could not be reached at all. Only the rows scroll, so the progress bar
+ * and the filter stay put. The height is measured from the panel rather than
+ * hardcoded: the host sizes the frame, and a fixed pixel cap left dead space
+ * in a tall panel and clipped a short one.
+ */
+.skku-list {
+  max-height: calc(100vh - 190px);
+  min-height: 180px;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* Dates and day figures line up in a column only if the digits are one width. */
+.skku-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One hairline between rows, inset past the time column, none after the last. */
+.skku-row + .skku-row {
+  border-top: 1px solid var(--color-border-neutral);
+}
+
+/*
+ * The today rule. The one saturated mark on the list, and the only element
+ * that is not a row: it turns a checklist into a timeline and answers "am I
+ * already late" before a word is read.
+ */
+.skku-today {
+  border-top: 1px solid var(--skku-late);
+}
+
+.skku-recess {
+  background-color: var(--skku-recess);
+}
+
+/*
+ * The recovery note. Bezier's fill-accent-red-transparent resolves to a
+ * zero-opacity red, so it painted nothing at all; this is the same hue as the
+ * today rule at the weight a wash needs to be visible without shouting.
+ */
+.skku-recover {
+  background-color: #fdf2f4;
+}
+
+[data-bezier-theme='dark'] .skku-recover {
+  background-color: rgba(240, 122, 147, 0.12);
+}
+
+/* Korean body text wraps badly below 150% leading. */
+.skku-prose {
+  line-height: 1.5;
+}
+
+/*
+ * The time column keeps its width at every size. Narrowing it to 44px made
+ * `10.19 (월)` run under the title, and the date is the column's whole point.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  .skku *,
+  .skku *::before,
+  .skku *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

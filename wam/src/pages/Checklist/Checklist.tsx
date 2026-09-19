@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  forwardRef,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
@@ -17,31 +25,21 @@ import {
   type SendAsBotInput,
 } from '@tutorial/shared'
 import {
-  Badge,
   Box,
   Button,
   Checkbox,
   Divider,
   HStack,
-  Icon,
   ProgressBar,
   Text,
   VStack,
 } from '@channel.io/bezier-react/beta'
-import {
-  ClockIcon,
-  DocumentIcon,
-  ErrorTriangleIcon,
-  MapPinIcon,
-} from '@channel.io/bezier-icons'
 import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
 import { useChecklistWamData } from '../../hooks/useChecklistWamData'
 import Assistant from './Assistant'
 import './brand.css'
-import { daysLabel, t } from './strings'
-
-const LEAD_COUNT = 3
+import { t } from './strings'
 
 const CATEGORY = [
   { id: 'all', key: 'all' },
@@ -50,49 +48,83 @@ const CATEGORY = [
   { id: 'life', key: 'catLife' },
 ] as const
 
-const SCOPE_LABEL = {
-  immigration: 'catImmigration',
-  academic: 'catAcademic',
-  life: 'catLife',
-} as const
-
 const SELECT_STYLE = {
   width: '100%',
   padding: '9px 10px',
   borderRadius: 8,
-  border: '1px solid var(--bezier-color-border-neutral)',
+  border: '1px solid var(--color-border-neutral)',
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
 }
-
-const TAG = {
-  overdue: { variant: 'red', key: 'overdueTag' },
-  urgent: { variant: 'orange', key: 'urgent' },
-  soon: { variant: 'yellow', key: 'soonTag' },
-  later: { variant: 'neutral-light', key: 'laterTag' },
-  done: { variant: 'green', key: 'done' },
-} as const
 
 const DATE_INPUT_STYLE = {
   width: '100%',
   padding: '9px 10px',
   borderRadius: 8,
-  border: '1px solid var(--bezier-color-border-neutral)',
+  border: '1px solid var(--color-border-neutral)',
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
 }
 
-function dueLabel(item: RequirementState, language: Language): string {
-  if (item.status === 'done') return t('done', language)
-  if (item.daysLeft === 0) return t('dueToday', language)
-  const amount = daysLabel(Math.abs(item.daysLeft), language)
-  if (item.daysLeft < 0) {
-    return language === 'ko' ? `${amount} 지남` : `${amount} overdue`
-  }
-  return language === 'ko' ? `${amount} 남음` : `${amount} left`
+/** `D+3` when late, `D-12` when coming, the word for today on the day. */
+function dayFigure(item: RequirementState, language: Language): string {
+  if (item.daysLeft === 0) return language === 'ko' ? '오늘' : 'Today'
+  return item.daysLeft < 0 ? `D+${-item.daysLeft}` : `D-${item.daysLeft}`
 }
+
+/** `9.16 (수)` / `Sep 16`. A deadline is only actionable as a real date. */
+function shortDate(iso: string, language: Language): string {
+  const parsed = new Date(`${iso}T00:00:00+09:00`)
+  if (Number.isNaN(parsed.getTime())) return iso
+  const month = parsed.getMonth() + 1
+  const day = parsed.getDate()
+  if (language === 'ko') {
+    const weekday = ['일', '월', '화', '수', '목', '금', '토'][parsed.getDay()]
+    return `${month}.${day} (${weekday})`
+  }
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'Asia/Seoul',
+  })
+}
+
+/**
+ * The line the list is read against.
+ *
+ * Lateness is a position, not a badge: rows above this rule are behind, rows
+ * below are ahead. It is the only saturated mark on the list, which is what
+ * makes it register at all.
+ */
+const TodayRule = forwardRef<
+  HTMLDivElement,
+  { language: Language; nothingLate: boolean }
+>(function TodayRule({ language, nothingLate }, ref) {
+  const today = shortDate(new Date().toISOString().slice(0, 10), language)
+  const label =
+    language === 'ko'
+      ? `오늘 ${today}${nothingLate ? ' · 늦은 항목 없음' : ''}`
+      : `Today, ${today}${nothingLate ? ' · nothing late' : ''}`
+  return (
+    <Box
+      ref={ref}
+      className="skku-today"
+      paddingTop={8}
+      marginTop={8}
+      marginBottom={8}
+    >
+      <Text
+        typo="13"
+        bold
+        color="text-accent-red"
+      >
+        {label}
+      </Text>
+    </Box>
+  )
+})
 
 function Row({
   item,
@@ -101,6 +133,7 @@ function Row({
   onAsk,
   open,
   onOpen,
+  late,
 }: {
   item: RequirementState
   language: Language
@@ -110,236 +143,215 @@ function Row({
   /** Collapsed rows show only what is needed to decide whether to read on. */
   open: boolean
   onOpen: () => void
+  /** Above the today rule. Carried as weight as well as colour. */
+  late: boolean
 }) {
   const isDone = item.status === 'done'
-  const tag = TAG[item.status]
+  const label = (key: 'why' | 'bring' | 'where') => (
+    <Box
+      className="skku-time"
+      shrink={0}
+      width={52}
+    >
+      <Text
+        typo="13"
+        bold
+        color="text-neutral-lighter"
+      >
+        {t(key, language)}
+      </Text>
+    </Box>
+  )
 
   return (
     <Box
-      padding={12}
-      borderRadius="8"
-      borderWidth={1}
-      borderColor="border-neutral"
+      className="skku-row"
+      paddingVertical={10}
     >
       <HStack
         align="start"
-        spacing={10}
+        spacing={12}
       >
-        <Checkbox
-          checked={isDone}
-          onCheckedChange={onToggle}
-        />
-        <VStack
-          spacing={6}
-          grow={1}
+        {/* Where you stand, before any word of the requirement is read. */}
+        <Box
+          className="skku-time skku-tabular"
+          shrink={0}
+          width={72}
         >
-          <HStack
-            align="center"
-            spacing={6}
-          >
-            <Box shrink={0}>
-              <Badge
-                size="xs"
-                variant={tag.variant}
-              >
-                {t(tag.key, language)}
-              </Badge>
-            </Box>
-            <Box shrink={0}>
-              <Badge
-                size="xs"
-                variant="neutral-light"
-              >
-                {t(SCOPE_LABEL[item.scope], language)}
-              </Badge>
-            </Box>
-            {item.national && (
-              <Box shrink={0}>
-                <Badge
-                  size="xs"
-                  variant="blue"
-                >
-                  {t('legal', language)}
-                </Badge>
-              </Box>
-            )}
-          </HStack>
+          <VStack spacing={2}>
+            <Text
+              typo={dayFigure(item, language).length > 4 ? '15' : '17'}
+              bold
+              style={{ whiteSpace: 'nowrap' }}
+              color={
+                isDone
+                  ? 'text-neutral-lighter'
+                  : late
+                    ? 'text-accent-red'
+                    : 'text-neutral-light'
+              }
+            >
+              {dayFigure(item, language)}
+            </Text>
+            <Text
+              typo="12"
+              color="text-neutral-lighter"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {shortDate(item.dueDate, language)}
+            </Text>
+          </VStack>
+        </Box>
 
+        <VStack
+          spacing={4}
+          grow={1}
+          style={{ minWidth: 0 }}
+        >
           <Text
             typo="15"
-            bold
+            bold={late && !isDone}
             color={isDone ? 'text-neutral-lighter' : 'text-neutral'}
             onClick={onOpen}
             style={{ cursor: 'pointer' }}
           >
-            {language === 'ko'
-              ? item.title
-              : `${item.title} (${item.officialKo})`}
+            {item.officialKo}
           </Text>
-
-          <HStack
-            as="span"
-            align="center"
-            spacing={4}
+          <Text
+            typo="13"
+            color="text-neutral-light"
+            onClick={onOpen}
+            style={{
+              cursor: 'pointer',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
           >
-            <Icon
-              source={ClockIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color={
-                item.status === 'overdue'
-                  ? 'text-accent-red'
-                  : 'text-neutral-lighter'
-              }
+            {language === 'ko' ? item.why : item.title}
+          </Text>
+        </VStack>
+
+        {/* The tick is an action, not a state: the left edge already says
+            whether this is late, so the control sits out of the reading path. */}
+        <Box shrink={0}>
+          <Checkbox
+            checked={isDone}
+            onCheckedChange={onToggle}
+          />
+        </Box>
+      </HStack>
+
+      {open && (
+        <Box
+          className="skku-recess"
+          borderRadius="8"
+          padding={12}
+          marginTop={4}
+        >
+          <VStack spacing={12}>
+            <HStack
+              align="start"
+              spacing={8}
             >
-              {`${item.dueDate} · ${dueLabel(item, language)}`}
+              {label('why')}
+              <Text
+                className="skku-prose"
+                typo="14"
+                color="text-neutral"
+              >
+                {item.why}
+              </Text>
+            </HStack>
+            <HStack
+              align="start"
+              spacing={8}
+            >
+              {label('bring')}
+              <VStack spacing={4}>
+                {item.bring.map((each) => (
+                  <Text
+                    key={each}
+                    className="skku-prose"
+                    typo="14"
+                    color="text-neutral"
+                  >
+                    {each}
+                  </Text>
+                ))}
+              </VStack>
+            </HStack>
+            <HStack
+              align="start"
+              spacing={8}
+            >
+              {label('where')}
+              <Text
+                className="skku-prose"
+                typo="14"
+                color="text-neutral"
+              >
+                {item.fee ? `${item.where} · ${item.fee}` : item.where}
+              </Text>
+            </HStack>
+          </VStack>
+        </Box>
+      )}
+
+      {open && item.status === 'overdue' && item.recovery.length > 0 && (
+        <Box
+          className="skku-recover"
+          borderRadius="8"
+          padding={12}
+          marginTop={8}
+        >
+          <VStack spacing={6}>
+            <Text
+              typo="14"
+              bold
+              color="text-accent-red"
+            >
+              {t('missed', language)}
             </Text>
-          </HStack>
-
-          {open && (
-            <>
-              <Box
-                padding={8}
-                borderRadius="6"
-                borderWidth={1}
-                borderColor="border-neutral"
+            {item.recovery.map((step, index) => (
+              <Text
+                key={step}
+                className="skku-prose"
+                typo="14"
+                color="text-neutral"
               >
-                <VStack spacing={2}>
-                  <Text
-                    typo="12"
-                    bold
-                    color="text-accent-blue"
-                  >
-                    {t('why', language)}
-                  </Text>
-                  <Text
-                    typo="12"
-                    color="text-neutral-light"
-                  >
-                    {item.why}
-                  </Text>
-                </VStack>
-              </Box>
-
-              <HStack
-                as="span"
-                align="start"
-                spacing={4}
+                {`${index + 1}. ${step}`}
+              </Text>
+            ))}
+            {item.penalty && (
+              <Text
+                typo="13"
+                color="text-accent-red"
               >
-                <Icon
-                  source={MapPinIcon}
-                  size="12"
-                  color="icon-neutral"
-                />
-                <Text
-                  as="span"
-                  typo="12"
-                  color="text-neutral-lighter"
-                >
-                  {item.fee ? `${item.where} · ${item.fee}` : item.where}
-                </Text>
-              </HStack>
-
-              <HStack
-                as="span"
-                align="start"
-                spacing={4}
-              >
-                <Icon
-                  source={DocumentIcon}
-                  size="12"
-                  color="icon-neutral"
-                />
-                <Text
-                  as="span"
-                  typo="12"
-                  color="text-neutral-lighter"
-                >
-                  {item.bring.join(', ')}
-                </Text>
-              </HStack>
-
-              {item.status === 'overdue' && item.recovery.length > 0 && (
-                <Box
-                  padding={8}
-                  borderRadius="6"
-                  borderWidth={1}
-                  borderColor="border-neutral"
-                >
-                  <HStack
-                    as="span"
-                    align="center"
-                    spacing={4}
-                  >
-                    <Icon
-                      source={ErrorTriangleIcon}
-                      size="12"
-                      color="icon-accent-red"
-                    />
-                    <Text
-                      as="span"
-                      typo="12"
-                      bold
-                      color="text-accent-red"
-                    >
-                      {t('missed', language)}
-                    </Text>
-                  </HStack>
-                  <VStack spacing={3}>
-                    {item.recovery.map((step, index) => (
-                      <Text
-                        key={step}
-                        typo="12"
-                        color="text-neutral-light"
-                      >
-                        {`${index + 1}. ${step}`}
-                      </Text>
-                    ))}
-                    {item.penalty && (
-                      <Text
-                        typo="12"
-                        color="text-accent-red"
-                      >
-                        {item.penalty}
-                      </Text>
-                    )}
-                  </VStack>
-                </Box>
-              )}
-            </>
-          )}
-          <HStack
-            align="center"
-            spacing={8}
-          >
-            <Button
-              variant="outlined"
-              semantic="primary"
-              size="xs"
-              label={t('ask', language)}
-              onClick={onAsk}
-            />
-            {item.status !== 'done' && (
-              <a
-                href={calendarUrl(item, language)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Text
-                  as="span"
-                  typo="12"
-                  color="text-accent-blue"
-                >
-                  {t('addToCalendar', language)}
-                </Text>
-              </a>
+                {item.penalty}
+              </Text>
             )}
+          </VStack>
+        </Box>
+      )}
+
+      {open && (
+        <HStack
+          align="center"
+          spacing={8}
+          wrap
+        >
+          <Button
+            variant="outlined"
+            semantic="primary"
+            size="xs"
+            label={t('ask', language)}
+            onClick={onAsk}
+          />
+          {item.status !== 'done' && (
             <a
-              href={item.sourceUrl}
+              href={calendarUrl(item, language)}
               target="_blank"
               rel="noreferrer"
             >
@@ -348,12 +360,25 @@ function Row({
                 typo="12"
                 color="text-accent-blue"
               >
-                {t('source', language)}
+                {t('addToCalendar', language)}
               </Text>
             </a>
-          </HStack>
-        </VStack>
-      </HStack>
+          )}
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Text
+              as="span"
+              typo="12"
+              color="text-accent-blue"
+            >
+              {t('source', language)}
+            </Text>
+          </a>
+        </HStack>
+      )}
     </Box>
   )
 }
@@ -372,8 +397,9 @@ function Checklist() {
   const [category, setCategory] = useState<string>('all')
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  const todayRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -405,6 +431,24 @@ function Checklist() {
     setSize({ width: 520, height: 800 })
   }, [setSize])
 
+  // A timeline opens at now. Sorted by date, the first row is the oldest miss,
+  // which is the one thing a student can no longer do anything about — so the
+  // list is scrolled to the rule, with what is past above and what is coming
+  // below, the way a calendar opens on today rather than on January.
+  useEffect(() => {
+    if (!hydrated) return
+    const rule = todayRef.current
+    const list = listRef.current
+    if (!rule || !list) return
+    // scrollIntoView would scroll the panel itself and take the header with
+    // it, so the offset is applied to the scrolling list on its own.
+    list.scrollTop =
+      rule.offsetTop -
+      list.offsetTop -
+      list.clientHeight / 2 +
+      rule.clientHeight
+  }, [hydrated])
+
   useEffect(() => {
     if (data && !hydrated) {
       setArrivalDate(data.arrivalDate)
@@ -416,9 +460,8 @@ function Checklist() {
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
       )
       setAsking(data.isNew)
-      // Asking for the dated view is asking to see every date, so it opens
-      // on all of them rather than on the three that matter today.
-      setExpanded(data.view === 'calendar')
+      // Every row now carries its date and the list is never truncated, so
+      // the dated view and the brief are the same screen. Nothing to switch.
       // The most urgent row opens itself, so the panel is never all headings.
       const firstOpen = data.items.find((item) => item.status !== 'done')
       setOpenRows(firstOpen ? [firstOpen.id] : [])
@@ -769,10 +812,20 @@ function Checklist() {
 
   const visible =
     category === 'all' ? items : items.filter((item) => item.scope === category)
-  const outstanding = visible.filter((item) => item.status !== 'done')
-  const lead = expanded ? visible : outstanding.slice(0, LEAD_COUNT)
-  const rest: RequirementState[] = []
   const doneCount = items.filter((item) => item.status === 'done').length
+
+  // Ascending by date, with the finished sunk to the bottom: the rule can only
+  // mean "everything above here is behind" if the list is a timeline.
+  const ordered = [...visible].sort((a, b) => {
+    if ((a.status === 'done') !== (b.status === 'done')) {
+      return a.status === 'done' ? 1 : -1
+    }
+    return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0
+  })
+  const firstNotLate = ordered.findIndex(
+    (item) => item.status === 'done' || item.daysLeft >= 0
+  )
+  const todayIndex = firstNotLate === -1 ? ordered.length : firstNotLate
   const counts = {
     all: items.length,
     immigration: items.filter((i) => i.scope === 'immigration').length,
@@ -785,55 +838,49 @@ function Checklist() {
       className="skku"
       spacing={12}
     >
-      <VStack spacing={6}>
-        {data.name && (
+      {/* Two lines, not six. Who this is for, and how far through they are —
+          the deadlines themselves start 40px from the top of the panel. */}
+      <VStack spacing={8}>
+        <HStack
+          align="center"
+          justify="between"
+          spacing={8}
+        >
           <Text
             typo="13"
-            color="text-neutral-lighter"
+            color="text-neutral-light"
           >
-            {`${t('greeting', language)}, ${data.name} · ${pick(school.name, language)}`}
+            {data.name
+              ? `${t('greeting', language)}, ${data.name}`
+              : pick(school.name, language)}
           </Text>
-        )}
-        <Text
-          typo="18"
-          bold
-          color="text-neutral"
-        >
-          {outstanding.length > 0
-            ? `${Math.min(outstanding.length, LEAD_COUNT)} ${t('headline', language)}`
-            : t('headlineNone', language)}
-        </Text>
-        <Text
-          typo="12"
-          color="text-neutral-lighter"
-        >
-          {t('filtered', language)}
-        </Text>
+          <Box shrink={0}>
+            <HStack
+              align="center"
+              spacing={8}
+            >
+              <Text
+                className="skku-tabular"
+                typo="13"
+                bold
+                color="text-neutral-light"
+              >
+                {`${doneCount}/${items.length}`}
+              </Text>
+              <Button
+                variant="ghost"
+                semantic="secondary"
+                size="xs"
+                label={t('edit', language)}
+                onClick={() => setAsking(true)}
+              />
+            </HStack>
+          </Box>
+        </HStack>
         <ProgressBar
           value={items.length === 0 ? 0 : doneCount / items.length}
           width="100%"
         />
-        <HStack
-          align="center"
-          justify="between"
-          spacing={6}
-        >
-          <Text
-            typo="12"
-            color="text-neutral-lighter"
-          >
-            {`${doneCount}/${items.length} ${t('progress', language)} · ${arrivalDate}`}
-          </Text>
-          <Box shrink={0}>
-            <Button
-              variant="ghost"
-              semantic="secondary"
-              size="xs"
-              label={t('changeAnswers', language)}
-              onClick={() => setAsking(true)}
-            />
-          </Box>
-        </HStack>
       </VStack>
 
       <HStack
@@ -861,53 +908,41 @@ function Checklist() {
         />
       )}
 
-      <VStack spacing={8}>
-        {lead.map((item) => (
-          <Row
-            key={item.id}
-            item={item}
-            language={language}
-            onToggle={toggle(item.id)}
-            onAsk={() => setConversation(item.id)}
-            open={openRows.includes(item.id)}
-            onOpen={() => toggleOpen(item.id)}
-          />
+      {/* One list, ascending, with today drawn through it. The split into a
+          lead of three and a hidden remainder made the panel hide the very
+          thing it is for; the rule does the triage instead. */}
+      <Box
+        ref={listRef}
+        className="skku-list"
+      >
+        {ordered.map((item, index) => (
+          <Fragment key={item.id}>
+            {index === todayIndex && (
+              <TodayRule
+                ref={todayRef}
+                language={language}
+                nothingLate={todayIndex === 0}
+              />
+            )}
+            <Row
+              item={item}
+              language={language}
+              onToggle={toggle(item.id)}
+              onAsk={() => setConversation(item.id)}
+              open={openRows.includes(item.id)}
+              onOpen={() => toggleOpen(item.id)}
+              late={index < todayIndex}
+            />
+          </Fragment>
         ))}
-        {rest.map((item) => (
-          <Row
-            key={item.id}
-            item={item}
+        {todayIndex === ordered.length && (
+          <TodayRule
+            ref={todayRef}
             language={language}
-            onToggle={toggle(item.id)}
-            onAsk={() => setConversation(item.id)}
-            open={openRows.includes(item.id)}
-            onOpen={() => toggleOpen(item.id)}
+            nothingLate={false}
           />
-        ))}
-      </VStack>
-
-      {visible.length > lead.length && (
-        <Button
-          variant="outlined"
-          semantic="secondary"
-          size="s"
-          label={
-            expanded
-              ? t('showLess', language)
-              : `${t('showAll', language)} (${visible.length - lead.length})`
-          }
-          onClick={() => setExpanded(true)}
-        />
-      )}
-      {expanded && (
-        <Button
-          variant="ghost"
-          semantic="secondary"
-          size="xs"
-          label={t('showLess', language)}
-          onClick={() => setExpanded(false)}
-        />
-      )}
+        )}
+      </Box>
 
       <Divider withoutSideIndent />
       <VStack spacing={6}>
