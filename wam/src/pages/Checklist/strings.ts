@@ -102,6 +102,13 @@ export const UI = {
   groupSoon: { en: 'This month', ko: '이번 달' },
   groupLater: { en: 'Later', ko: '나중에' },
   groupDone: { en: 'Done', ko: '완료' },
+  bookedFor: { en: 'Booked for', ko: '예약함' },
+  relatedLabel: { en: 'People also ask', ko: '이런 것도 물어봐요' },
+  bookLabel: { en: 'Booked for', ko: '예약 날짜' },
+  callLabel: {
+    en: 'Not sure? The immigration helpline answers in English:',
+    ko: '잘 모르겠다면 외국인종합안내센터에 전화하세요:',
+  },
   searchPlaceholder: {
     en: 'Search — ARC, tuition, dormitory…',
     ko: '검색 — 외국인등록, 등록금, 기숙사…',

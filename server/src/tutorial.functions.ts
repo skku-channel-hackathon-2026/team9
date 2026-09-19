@@ -644,6 +644,7 @@ export class TutorialFunctions {
       arrivalDate: input.arrivalDate ?? current.arrivalDate,
       semesterStart: current.semesterStart,
       completed: Array.from(new Set(input.completed)),
+      booked: current.booked ?? {},
       isInternational: input.isInternational ?? current.isInternational,
       living: current.living,
       university: current.university,
@@ -658,6 +659,6 @@ export class TutorialFunctions {
       );
     }
 
-    return { saved: true, completed: next.completed };
+    return { saved: true, completed: next.completed, booked: next.booked };
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   suggestedQuestions,
   type AssistantAnswer,
@@ -53,12 +53,15 @@ function Assistant({
   item,
   ask,
   onBack,
+  preset,
 }: {
   language: Language
   /** The row this was opened from, when it was opened from one. */
   item: RequirementState | null
   ask: (input: { question: string; about?: string }) => Promise<AssistantAnswer>
   onBack: () => void
+  /** A question the student picked from a row, asked on open. */
+  preset?: string
 }) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [question, setQuestion] = useState('')
@@ -117,6 +120,16 @@ function Assistant({
     },
     [ask, item, pending]
   )
+
+  const asked = useRef(false)
+  useEffect(() => {
+    // The question the student picked from a row is asked on open, so the
+    // chip behaves like a question and not like a text-field prefill.
+    if (preset && !asked.current) {
+      asked.current = true
+      void send(preset)
+    }
+  }, [preset, send])
 
   return (
     <VStack

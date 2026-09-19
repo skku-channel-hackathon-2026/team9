@@ -135,9 +135,12 @@ function Row({
   language,
   onToggle,
   onAsk,
+  onAskThis,
   open,
   onOpen,
   late,
+  booked,
+  onBook,
 }: {
   rowRef: (node: HTMLDivElement | null) => void
   item: RequirementState
@@ -145,11 +148,16 @@ function Row({
   onToggle: (checked: boolean) => void
   /** Opens the question view with this row as its subject. */
   onAsk: () => void
+  /** Opens the question view already asking this. */
+  onAskThis: (question: string) => void
   /** Collapsed rows show only what is needed to decide whether to read on. */
   open: boolean
   onOpen: () => void
-  /** Above the today rule. Carried as weight as well as colour. */
+  /** Past its date. Carried as weight as well as colour. */
   late: boolean
+  /** ISO date an appointment is booked for, or '' for none. */
+  booked: string
+  onBook: (when: string) => void
 }) {
   const isDone = item.status === 'done'
   const label = (key: 'why' | 'bring' | 'where') => (
@@ -218,6 +226,15 @@ function Row({
           >
             {item.officialKo}
           </Text>
+          {booked !== '' && !isDone && (
+            <Text
+              typo="12"
+              bold
+              color="text-accent-green"
+            >
+              {`${t('bookedFor', language)} ${shortDate(booked, language)}`}
+            </Text>
+          )}
           <Text
             typo="13"
             color="text-neutral-light"
@@ -337,6 +354,98 @@ function Row({
         </Box>
       )}
 
+      {open && !isDone && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <HStack
+            align="center"
+            spacing={8}
+            wrap
+          >
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('bookLabel', language)}
+            </Text>
+            <input
+              type="date"
+              value={booked}
+              onChange={(event) => onBook(event.target.value)}
+              style={{
+                padding: '6px 8px',
+                borderRadius: 6,
+                border: '1px solid var(--color-border-neutral)',
+                background: 'transparent',
+                color: 'inherit',
+                font: 'inherit',
+                fontSize: 13,
+              }}
+            />
+          </HStack>
+        </Box>
+      )}
+
+      {/* A blank question box is a blank page. These are the questions this
+          row actually raises, so the assistant starts as something to browse
+          rather than something to compose. */}
+      {open && (
+        <Box
+          marginTop={12}
+          marginLeft={84}
+        >
+          <VStack spacing={6}>
+            <Text
+              typo="13"
+              bold
+              color="text-neutral-lighter"
+            >
+              {t('relatedLabel', language)}
+            </Text>
+            <HStack
+              spacing={6}
+              wrap
+            >
+              {suggestedQuestions(language, item)
+                .slice(0, 3)
+                .map((question) => (
+                  <Button
+                    key={question}
+                    variant="outlined"
+                    semantic="secondary"
+                    size="xs"
+                    label={question}
+                    onClick={() => onAskThis(question)}
+                  />
+                ))}
+            </HStack>
+          </VStack>
+        </Box>
+      )}
+
+      {open && item.scope === 'immigration' && (
+        <Box
+          marginTop={10}
+          marginLeft={84}
+        >
+          <Text
+            typo="13"
+            color="text-neutral-light"
+          >
+            {t('callLabel', language)}{' '}
+            <a
+              href="tel:1345"
+              style={{ color: 'var(--skku-blue)', fontWeight: 600 }}
+            >
+              1345
+            </a>
+          </Text>
+        </Box>
+      )}
+
       {open && (
         <HStack
           align="center"
@@ -404,6 +513,8 @@ function Checklist() {
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [showCalendar, setShowCalendar] = useState(false)
   const [query, setQuery] = useState('')
+  const [booked, setBooked] = useState<Record<string, string>>({})
+  const [preset, setPreset] = useState('')
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -447,6 +558,13 @@ function Checklist() {
       setSemester(data.semester)
       setCompleted(
         data.items.filter((item) => item.status === 'done').map((i) => i.id)
+      )
+      setBooked(
+        Object.fromEntries(
+          data.items
+            .filter((item) => item.bookedFor)
+            .map((item) => [item.id, item.bookedFor as string])
+        )
       )
       setAsking(data.isNew)
       // Every row now carries its date and the list is never truncated, so
@@ -498,6 +616,24 @@ function Checklist() {
       }
     },
     [data, saveProgress]
+  )
+
+  /**
+   * Most of these are not done or undone — they are "I have an appointment on
+   * the third". Without somewhere to put that, a student either ticks a thing
+   * they have not done or watches it sit in red for a fortnight.
+   */
+  const setBooking = useCallback(
+    (id: string) => (when: string) => {
+      setBooked((prev) => {
+        const next = { ...prev }
+        if (when) next[id] = when
+        else delete next[id]
+        return next
+      })
+      void persist({ booked: { [id]: when } })
+    },
+    [persist]
   )
 
   const toggleOpen = useCallback((id: string) => {
@@ -659,7 +795,11 @@ function Checklist() {
         language={language}
         item={items.find((candidate) => candidate.id === conversation) ?? null}
         ask={askQuestion}
-        onBack={() => setConversation(null)}
+        preset={preset}
+        onBack={() => {
+          setConversation(null)
+          setPreset('')
+        }}
       />
     )
   }
@@ -857,6 +997,20 @@ function Checklist() {
     category === 'all' ? items : items.filter((item) => item.scope === category)
   const doneCount = items.filter((item) => item.status === 'done').length
   const lateCount = items.filter((item) => item.status === 'overdue').length
+  // What the term still costs. Every fee is written as prose, so the figures
+  // are read out of it rather than stored twice.
+  const owedWon = items
+    .filter((item) => item.status !== 'done' && item.fee)
+    .reduce((total, item) => {
+      const digits = (item.fee ?? '').replace(/,/g, '').match(/\d{4,}/)
+      return total + (digits ? Number(digits[0]) : 0)
+    }, 0)
+  const owed =
+    owedWon > 0
+      ? language === 'ko'
+        ? `${owedWon.toLocaleString('ko-KR')}원 남음`
+        : `₩${owedWon.toLocaleString('en-US')} to pay`
+      : ''
   const nextUp = [...items]
     .filter((item) => item.status !== 'done')
     .sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1))[0]
@@ -982,6 +1136,7 @@ function Checklist() {
                 language
               ),
               `${doneCount}/${items.length}`,
+              owed,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -1136,9 +1291,15 @@ function Checklist() {
                   language={language}
                   onToggle={toggle(item.id)}
                   onAsk={() => setConversation(item.id)}
+                  onAskThis={(question) => {
+                    setConversation(item.id)
+                    setPreset(question)
+                  }}
                   open={openRows.includes(item.id)}
                   onOpen={() => toggleOpen(item.id)}
                   late={item.status === 'overdue'}
+                  booked={booked[item.id] ?? ''}
+                  onBook={setBooking(item.id)}
                 />
               ))}
             </Fragment>
