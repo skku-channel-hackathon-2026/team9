@@ -100,12 +100,17 @@ function Row({
   language,
   onToggle,
   onAsk,
+  open,
+  onOpen,
 }: {
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
   /** Opens the question view with this row as its subject. */
   onAsk: () => void
+  /** Collapsed rows show only what is needed to decide whether to read on. */
+  open: boolean
+  onOpen: () => void
 }) {
   const isDone = item.status === 'done'
   const tag = TAG[item.status]
@@ -165,6 +170,8 @@ function Row({
             typo="15"
             bold
             color={isDone ? 'text-neutral-lighter' : 'text-neutral'}
+            onClick={onOpen}
+            style={{ cursor: 'pointer' }}
           >
             {language === 'ko'
               ? item.title
@@ -194,115 +201,118 @@ function Row({
             </Text>
           </HStack>
 
-          <Box
-            padding={8}
-            borderRadius="6"
-            borderWidth={1}
-            borderColor="border-neutral"
-          >
-            <VStack spacing={2}>
-              <Text
-                typo="12"
-                bold
-                color="text-accent-blue"
+          {open && (
+            <>
+              <Box
+                padding={8}
+                borderRadius="6"
+                borderWidth={1}
+                borderColor="border-neutral"
               >
-                {t('why', language)}
-              </Text>
-              <Text
-                typo="12"
-                color="text-neutral-light"
-              >
-                {item.why}
-              </Text>
-            </VStack>
-          </Box>
+                <VStack spacing={2}>
+                  <Text
+                    typo="12"
+                    bold
+                    color="text-accent-blue"
+                  >
+                    {t('why', language)}
+                  </Text>
+                  <Text
+                    typo="12"
+                    color="text-neutral-light"
+                  >
+                    {item.why}
+                  </Text>
+                </VStack>
+              </Box>
 
-          <HStack
-            as="span"
-            align="start"
-            spacing={4}
-          >
-            <Icon
-              source={MapPinIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {item.fee ? `${item.where} · ${item.fee}` : item.where}
-            </Text>
-          </HStack>
-
-          <HStack
-            as="span"
-            align="start"
-            spacing={4}
-          >
-            <Icon
-              source={DocumentIcon}
-              size="12"
-              color="icon-neutral"
-            />
-            <Text
-              as="span"
-              typo="12"
-              color="text-neutral-lighter"
-            >
-              {item.bring.join(', ')}
-            </Text>
-          </HStack>
-
-          {item.status === 'overdue' && item.recovery.length > 0 && (
-            <Box
-              padding={8}
-              borderRadius="6"
-              borderWidth={1}
-              borderColor="border-neutral"
-            >
               <HStack
                 as="span"
-                align="center"
+                align="start"
                 spacing={4}
               >
                 <Icon
-                  source={ErrorTriangleIcon}
+                  source={MapPinIcon}
                   size="12"
-                  color="icon-accent-red"
+                  color="icon-neutral"
                 />
                 <Text
                   as="span"
                   typo="12"
-                  bold
-                  color="text-accent-red"
+                  color="text-neutral-lighter"
                 >
-                  {t('missed', language)}
+                  {item.fee ? `${item.where} · ${item.fee}` : item.where}
                 </Text>
               </HStack>
-              <VStack spacing={3}>
-                {item.recovery.map((step, index) => (
-                  <Text
-                    key={step}
-                    typo="12"
-                    color="text-neutral-light"
-                  >
-                    {`${index + 1}. ${step}`}
-                  </Text>
-                ))}
-                {item.penalty && (
-                  <Text
-                    typo="12"
-                    color="text-accent-red"
-                  >
-                    {item.penalty}
-                  </Text>
-                )}
-              </VStack>
-            </Box>
-          )}
 
+              <HStack
+                as="span"
+                align="start"
+                spacing={4}
+              >
+                <Icon
+                  source={DocumentIcon}
+                  size="12"
+                  color="icon-neutral"
+                />
+                <Text
+                  as="span"
+                  typo="12"
+                  color="text-neutral-lighter"
+                >
+                  {item.bring.join(', ')}
+                </Text>
+              </HStack>
+
+              {item.status === 'overdue' && item.recovery.length > 0 && (
+                <Box
+                  padding={8}
+                  borderRadius="6"
+                  borderWidth={1}
+                  borderColor="border-neutral"
+                >
+                  <HStack
+                    as="span"
+                    align="center"
+                    spacing={4}
+                  >
+                    <Icon
+                      source={ErrorTriangleIcon}
+                      size="12"
+                      color="icon-accent-red"
+                    />
+                    <Text
+                      as="span"
+                      typo="12"
+                      bold
+                      color="text-accent-red"
+                    >
+                      {t('missed', language)}
+                    </Text>
+                  </HStack>
+                  <VStack spacing={3}>
+                    {item.recovery.map((step, index) => (
+                      <Text
+                        key={step}
+                        typo="12"
+                        color="text-neutral-light"
+                      >
+                        {`${index + 1}. ${step}`}
+                      </Text>
+                    ))}
+                    {item.penalty && (
+                      <Text
+                        typo="12"
+                        color="text-accent-red"
+                      >
+                        {item.penalty}
+                      </Text>
+                    )}
+                  </VStack>
+                </Box>
+              )}
+            </>
+          )}
           <HStack
             align="center"
             spacing={8}
@@ -357,6 +367,9 @@ function Checklist() {
   const [living, setLiving] = useState<'dorm' | 'commuter'>('dorm')
   const [university, setUniversity] = useState('skku')
   const [semester, setSemester] = useState<Semester>('first')
+  // Collapsed by default: a row showing everything it knows is ten lines, and
+  // three of those is a wall of text before the reader has scrolled once.
+  const [openRows, setOpenRows] = useState<string[]>([])
   const [category, setCategory] = useState<string>('all')
   const [completed, setCompleted] = useState<string[]>([])
   const [asking, setAsking] = useState(false)
@@ -402,6 +415,9 @@ function Checklist() {
       // `/calendar` is a request to see every date, so it opens on all of
       // them rather than on the three that matter today.
       setExpanded(data.view === 'calendar')
+      // The most urgent row opens itself, so the panel is never all headings.
+      const firstOpen = data.items.find((item) => item.status !== 'done')
+      setOpenRows(firstOpen ? [firstOpen.id] : [])
       setHydrated(true)
     }
   }, [data, hydrated])
@@ -447,6 +463,12 @@ function Checklist() {
     },
     [data, saveProgress]
   )
+
+  const toggleOpen = useCallback((id: string) => {
+    setOpenRows((prev) =>
+      prev.includes(id) ? prev.filter((each) => each !== id) : [...prev, id]
+    )
+  }, [])
 
   const toggle = useCallback(
     (id: string) => (checked: boolean) => {
@@ -603,39 +625,6 @@ function Checklist() {
               {t('noSchoolDates', language)}
             </Text>
           )}
-        </VStack>
-
-        <VStack spacing={4}>
-          <Text
-            typo="13"
-            bold
-            color="text-neutral"
-          >
-            {t('semester', language)}
-          </Text>
-          <HStack spacing={6}>
-            <Button
-              variant={semester === 'first' ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('semFirst', language)}
-              onClick={() => setSemester('first')}
-            />
-            <Button
-              variant={semester === 'second' ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('semSecond', language)}
-              onClick={() => setSemester('second')}
-            />
-            <Button
-              variant={semester === 'later' ? 'filled' : 'outlined'}
-              semantic="primary"
-              size="s"
-              label={t('semLater', language)}
-              onClick={() => setSemester('later')}
-            />
-          </HStack>
         </VStack>
 
         {isInternational && (
@@ -868,6 +857,8 @@ function Checklist() {
             language={language}
             onToggle={toggle(item.id)}
             onAsk={() => setConversation(item.id)}
+            open={openRows.includes(item.id)}
+            onOpen={() => toggleOpen(item.id)}
           />
         ))}
         {rest.map((item) => (
@@ -877,6 +868,8 @@ function Checklist() {
             language={language}
             onToggle={toggle(item.id)}
             onAsk={() => setConversation(item.id)}
+            open={openRows.includes(item.id)}
+            onOpen={() => toggleOpen(item.id)}
           />
         ))}
       </VStack>
