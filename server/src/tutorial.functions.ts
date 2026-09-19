@@ -248,6 +248,12 @@ export class TutorialFunctions {
       targetToken,
     } satisfies TutorialWamArgs;
 
+    // /calendar is gone: a command the organisers have not registered never
+    // appears in Desk at all. The dated view it used to open is still here,
+    // asked for through the input field of the one command that is registered.
+    const requestedView =
+      params.input?.["view"] === "calendar" ? "calendar" : view;
+
     const today = todayInSeoul();
     const loaded = await loadProgress(ctx, today);
     let progress = loaded.progress;
@@ -321,7 +327,7 @@ export class TutorialFunctions {
           isNew,
           canSave: hasDatabase(),
           assistantAnswer,
-          view,
+          view: requestedView,
         },
       },
     };
