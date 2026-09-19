@@ -812,13 +812,6 @@ function Checklist() {
       >
         <VStack spacing={4}>
           <Text
-            typo="11"
-            bold
-            color="text-accent-blue"
-          >
-            {t('setupKicker', language)}
-          </Text>
-          <Text
             typo="18"
             bold
             color="text-neutral"

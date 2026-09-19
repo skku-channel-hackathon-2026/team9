@@ -22,7 +22,7 @@ const INPUT_STYLE = {
   width: '100%',
   padding: '9px 10px',
   borderRadius: 8,
-  border: '1px solid var(--bezier-color-border-neutral)',
+  border: '1px solid var(--color-border-neutral)',
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
