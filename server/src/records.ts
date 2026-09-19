@@ -82,3 +82,8 @@ export async function writeRecord(
     return false;
   }
 }
+
+/** True when the Workers D1 binding is present for this request. */
+export function hasDatabase(): boolean {
+  return tryGetDatabase() !== null;
+}

@@ -1,12 +1,22 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import {
+  buildChecklist,
+  CHECKLIST_FUNCTIONS,
   CommandActionInputSchema,
+  DEFAULT_ARRIVAL,
+  DEFAULT_SEMESTER_START,
+  parseIsoDate,
+  SaveProgressInputSchema,
+  SaveProgressOutputSchema,
   SendAsBotInputSchema,
+  StoredProgressSchema,
   TUTORIAL_FUNCTIONS,
   TUTORIAL_WAM_NAME,
   type CommandActionInput,
+  type SaveProgressInput,
   type SendAsBotInput,
+  type StoredProgress,
   type TutorialWamArgs,
 } from "@tutorial/shared";
 import {
@@ -30,9 +40,41 @@ import {
   createTutorialTargetToken,
   readTutorialTargetToken,
 } from "./target-token.js";
+import {
+  hasDatabase,
+  progressRecordId,
+  readRecord,
+  writeRecord,
+} from "./records.js";
 
 const tutorialMessage = "This is a test message sent by a manager.";
 const botMessage = "This is a test message sent by a bot.";
+
+/** Deadlines here are counted in Seoul, where the offices actually are. */
+function todayInSeoul(): string {
+  const now = new Date();
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function recordIdFor(ctx: Context): string {
+  return progressRecordId(ctx.channel.id, ctx.caller.type, ctx.caller.id ?? "");
+}
+
+/** Stored progress, or sensible defaults the first time someone opens this. */
+async function loadProgress(ctx: Context): Promise<StoredProgress> {
+  const parsed = StoredProgressSchema.safeParse(
+    await readRecord(recordIdFor(ctx)),
+  );
+  return parsed.success
+    ? parsed.data
+    : {
+        arrivalDate: DEFAULT_ARRIVAL,
+        semesterStart: DEFAULT_SEMESTER_START,
+        completed: [],
+      };
+}
 
 @Extension({ name: "command", systemVersion: "v1" })
 export class CommandExtension {
@@ -46,9 +88,18 @@ export class CommandExtension {
         {
           name: "tutorial",
           scope: "desk",
-          description: "Open the Channel App SDK tutorial WAM",
+          description:
+            "\uc2e0\uc785\uc0dd \uccb4\ud06c\ub9ac\uc2a4\ud2b8: \ubb34\uc5c7\uc744 \uc5b8\uc81c\uae4c\uc9c0 \ud574\uc57c \ud558\ub294\uc9c0",
           actionFunctionName: TUTORIAL_FUNCTIONS.open,
-          alfMode: "disable",
+          alfMode: "recommend",
+          alfDescription:
+            "Opens a new student's personal checklist of things they must " +
+            "complete after arriving in Korea, with the deadline for each " +
+            "one, the documents to bring and where to go. Recommend this " +
+            "when someone asks what they need to do, what paperwork is " +
+            "required, when something is due, or about alien registration " +
+            "(ARC), reporting their address, health insurance, tuition " +
+            "payment or course withdrawal.",
           enabledByDefault: true,
         },
       ],
@@ -64,13 +115,13 @@ export class TutorialFunctions {
   ) {}
 
   @Func(TUTORIAL_FUNCTIONS.open)
-  @Description("Open the tutorial WAM")
+  @Description("Open the freshman checklist for the current person")
   @InputSchema(CommandActionInputSchema)
   @OutputSchema(CommandResultSchema)
-  open(
+  async open(
     @Ctx() ctx: Context,
     @Input() params: CommandActionInput,
-  ): z.infer<typeof CommandResultSchema> {
+  ): Promise<z.infer<typeof CommandResultSchema>> {
     const chat = params.chat;
     const managerId = ctx.caller.id ?? "";
     const triggerAttributes = params.trigger?.attributes ?? {};
@@ -90,7 +141,7 @@ export class TutorialFunctions {
           )
         : undefined;
 
-    const wamArgs = {
+    const tutorialArgs = {
       chatId: chat?.id ?? "",
       chatType: chat?.type ?? "",
       chatTitle: triggerAttributes.chatTitle ?? "",
@@ -101,12 +152,22 @@ export class TutorialFunctions {
       targetToken,
     } satisfies TutorialWamArgs;
 
+    const progress = await loadProgress(ctx);
+    const today = todayInSeoul();
+
     return {
       type: "wam",
       attributes: {
         appId,
         name: TUTORIAL_WAM_NAME,
-        wamArgs,
+        wamArgs: {
+          ...tutorialArgs,
+          items: buildChecklist({ ...progress, today }),
+          arrivalDate: progress.arrivalDate,
+          semesterStart: progress.semesterStart,
+          today,
+          canSave: hasDatabase(),
+        },
       },
     };
   }
@@ -159,5 +220,39 @@ export class TutorialFunctions {
     }
 
     return {};
+  }
+
+  @Func(CHECKLIST_FUNCTIONS.saveProgress)
+  @Description("Record which requirements this person has completed")
+  @InputSchema(SaveProgressInputSchema)
+  @OutputSchema(SaveProgressOutputSchema)
+  async saveProgress(
+    @Ctx() ctx: Context,
+    @Input() input: SaveProgressInput,
+  ): Promise<z.infer<typeof SaveProgressOutputSchema>> {
+    if (input.arrivalDate && parseIsoDate(input.arrivalDate) === null) {
+      throw new FunctionCallError(
+        "The arrival date must be formatted as YYYY-MM-DD",
+        FunctionCallErrorCode.BadRequest,
+        { type: "invalidArrivalDate" },
+      );
+    }
+
+    const current = await loadProgress(ctx);
+    const next: StoredProgress = {
+      arrivalDate: input.arrivalDate ?? current.arrivalDate,
+      semesterStart: current.semesterStart,
+      completed: Array.from(new Set(input.completed)),
+    };
+
+    if (!(await writeRecord(recordIdFor(ctx), next))) {
+      throw new FunctionCallError(
+        "Progress could not be saved",
+        FunctionCallErrorCode.Internal,
+        { type: "storageUnavailable" },
+      );
+    }
+
+    return { saved: true, completed: next.completed };
   }
 }
