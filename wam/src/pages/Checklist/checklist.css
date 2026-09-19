@@ -374,3 +374,16 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/*
+ * A tick writes to the database before it is actually saved. On a slow connection
+ * that is a second or two of a control that looks like it did nothing, so it
+ * says it is working rather than staying silent.
+ */
+.cl-tick[data-saving='true'] {
+  opacity: 0.55;
+}
+
+.cl-ask[disabled] {
+  cursor: default;
+}
