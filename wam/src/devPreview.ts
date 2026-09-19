@@ -35,7 +35,12 @@ export function installDevPreview(): void {
       ...defaultProgress(today),
       completed,
       today,
-      profile: { isInternational: true, living: 'dorm', university: 'skku' },
+      profile: {
+        isInternational: true,
+        living: 'dorm',
+        university: 'skku',
+        semester: 'first',
+      },
     }),
     arrivalDate: defaultProgress(today).arrivalDate,
     semesterStart: defaultProgress(today).semesterStart,
@@ -44,6 +49,7 @@ export function installDevPreview(): void {
     isInternational: true,
     living: 'dorm',
     university: 'skku',
+    semester: 'first',
     name: 'Alex',
     canSave: true,
   })
