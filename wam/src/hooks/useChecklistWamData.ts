@@ -40,6 +40,10 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   const targetToken = useWamData('targetToken')
   const canSave = useWamData('canSave')
   const view = useWamData('view')
+  // The server puts a generated answer here. Desk hands wamArgs to the panel,
+  // so this is the one path a server-side answer can travel back on — we were
+  // never reading it.
+  const assistantAnswer = useWamData('assistantAnswer')
 
   return useMemo(() => {
     const parsed = ChecklistWamArgsSchema.safeParse({
@@ -57,6 +61,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
       targetToken,
       canSave,
       view,
+      assistantAnswer,
     })
 
     if (parsed.success) {
@@ -98,6 +103,7 @@ export function useChecklistWamData(): ChecklistWamDataResult {
   }, [
     appId,
     arrivalDate,
+    assistantAnswer,
     canSave,
     isInternational,
     isNew,
