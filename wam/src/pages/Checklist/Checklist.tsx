@@ -36,6 +36,7 @@ import {
   Divider,
   HStack,
   Icon,
+  Search,
   SegmentedControl,
   SegmentedControlItem,
   Text,
@@ -414,6 +415,7 @@ function Checklist() {
   const listRef = useRef<HTMLDivElement>(null)
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [showCalendar, setShowCalendar] = useState(false)
+  const [query, setQuery] = useState('')
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
   /**
@@ -790,14 +792,14 @@ function Checklist() {
             <Button
               variant={isInternational ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('international', language)}
               onClick={() => setIsInternational(true)}
             />
             <Button
               variant={isInternational ? 'outlined' : 'filled'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('domestic', language)}
               onClick={() => setIsInternational(false)}
             />
@@ -816,14 +818,14 @@ function Checklist() {
             <Button
               variant={living === 'dorm' ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('dorm', language)}
               onClick={() => setLiving('dorm')}
             />
             <Button
               variant={living === 'commuter' ? 'filled' : 'outlined'}
               semantic="primary"
-              size="s"
+              size="m"
               label={t('commuter', language)}
               onClick={() => setLiving('commuter')}
             />
@@ -840,7 +842,7 @@ function Checklist() {
         <Button
           variant="ghost"
           semantic="secondary"
-          size="s"
+          size="m"
           label={t('clear', language)}
           onClick={startOver}
         />
@@ -887,7 +889,20 @@ function Checklist() {
 
   // Ascending by date, with the finished sunk to the bottom: the rule can only
   // mean "everything above here is behind" if the list is a timeline.
-  const ordered = [...visible].sort((a, b) => {
+  // A student searching knows one word — the Korean term, the English name,
+  // "passport", "dormitory". All of it is searchable, not just the title.
+  const needle = query.trim().toLowerCase()
+  const searched =
+    needle === ''
+      ? visible
+      : visible.filter((item) =>
+          [item.title, item.officialKo, item.why, item.where, ...item.bring]
+            .join(' ')
+            .toLowerCase()
+            .includes(needle)
+        )
+
+  const ordered = [...searched].sort((a, b) => {
     if ((a.status === 'done') !== (b.status === 'done')) {
       return a.status === 'done' ? 1 : -1
     }
@@ -1016,24 +1031,36 @@ function Checklist() {
         )}
       </VStack>
 
-      <SegmentedControl
-        type="radiogroup"
-        size="s"
-        width="100%"
-        value={category}
-        onValueChange={setCategory}
-      >
-        {CATEGORY.filter(
-          (option) => option.id === 'all' || counts[option.id] > 0
-        ).map((option) => (
-          <SegmentedControlItem
-            key={option.id}
-            value={option.id}
-          >
-            {`${t(option.short, language)} ${counts[option.id]}`}
-          </SegmentedControlItem>
-        ))}
-      </SegmentedControl>
+      <Search
+        size="m"
+        allowClear
+        placeholder={t('searchPlaceholder', language)}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+
+      {/* While searching, the category chips only narrow a list that is
+          already narrow, and the panel has no room to spare. */}
+      {needle === '' && (
+        <SegmentedControl
+          type="radiogroup"
+          size="m"
+          width="100%"
+          value={category}
+          onValueChange={setCategory}
+        >
+          {CATEGORY.filter(
+            (option) => option.id === 'all' || counts[option.id] > 0
+          ).map((option) => (
+            <SegmentedControlItem
+              key={option.id}
+              value={option.id}
+            >
+              {`${t(option.short, language)} ${counts[option.id]}`}
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
+      )}
 
       {saveFailed && (
         <InlineBanner
@@ -1049,9 +1076,21 @@ function Checklist() {
         ref={listRef}
         className="skku-list"
       >
+        {needle !== '' && (
+          <Box paddingVertical={8}>
+            <Text
+              typo="13"
+              color="text-neutral-light"
+            >
+              {ordered.length === 0
+                ? t('searchNone', language)
+                : `${ordered.length} ${t('searchFound', language)}`}
+            </Text>
+          </Box>
+        )}
         {ordered.map((item, index) => (
           <Fragment key={item.id}>
-            {index === todayIndex && (
+            {needle === '' && index === todayIndex && (
               <TodayRule
                 ref={todayRef}
                 language={language}
@@ -1072,7 +1111,7 @@ function Checklist() {
             />
           </Fragment>
         ))}
-        {todayIndex === ordered.length && (
+        {needle === '' && todayIndex === ordered.length && (
           <TodayRule
             ref={todayRef}
             language={language}
@@ -1102,7 +1141,7 @@ function Checklist() {
         <Button
           variant="outlined"
           semantic="primary"
-          size="s"
+          size="m"
           label={
             posted === 'sent' ? t('posted', language) : t('post', language)
           }

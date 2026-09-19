@@ -98,6 +98,15 @@ export const UI = {
   catAcademicShort: { en: 'School', ko: '학사' },
   addToCalendar: { en: 'Add to calendar', ko: '캘린더에 추가' },
   calendar: { en: 'Calendar', ko: '캘린더' },
+  searchPlaceholder: {
+    en: 'Search — ARC, tuition, dormitory…',
+    ko: '검색 — 외국인등록, 등록금, 기숙사…',
+  },
+  searchFound: { en: 'found', ko: '건' },
+  searchNone: {
+    en: 'Nothing matches that. Try the Korean term, or ask in the chat.',
+    ko: '검색 결과가 없습니다. 채팅으로 물어보세요.',
+  },
   prevMonth: { en: 'Previous month', ko: '이전 달' },
   nextMonth: { en: 'Next month', ko: '다음 달' },
   profileIntl: { en: 'International', ko: '외국인 유학생' },
