@@ -2,12 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
-  CHECKLIST_FUNCTIONS,
   SCHOOL,
   TUTORIAL_FUNCTIONS,
   type SendAsBotInput,
   type RequirementState,
-  type SaveProgressInput,
+  type ProgressUpdate,
 } from '@tutorial/shared'
 import {
   Badge,
@@ -75,9 +74,12 @@ function Checklist() {
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
   const [hydrated, setHydrated] = useState(false)
 
-  const { call: saveProgress } = useCallFunction<{ saved: boolean }>({
+  // Saving goes through the command's own function using its existing
+  // free-form input field, so it works with the registration AppStore already
+  // holds rather than waiting on a new one.
+  const { call: saveProgress } = useCallFunction<unknown>({
     appId,
-    name: CHECKLIST_FUNCTIONS.saveProgress,
+    name: TUTORIAL_FUNCTIONS.open,
   })
   const { call: postToChat, loading: posting } = useCallFunction<void>({
     appId,
@@ -126,12 +128,12 @@ function Checklist() {
         return
       }
       try {
-        const input: SaveProgressInput = {
+        const update: ProgressUpdate = {
           completed: nextCompleted,
           arrivalDate: nextArrival,
           isInternational: nextInternational,
         }
-        await saveProgress(input)
+        await saveProgress({ input: update })
         setSaveFailed(false)
       } catch {
         setSaveFailed(true)

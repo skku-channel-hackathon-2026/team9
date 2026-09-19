@@ -88,6 +88,50 @@ let today;
   ok("every requirement cites a source and says what to bring and where");
 }
 
+console.log("\nSaving without anything new registered");
+{
+  const solo = personIn("ch-e2e", `solo-${Date.now()}`);
+  // Only tutorial.open is used here. It is the function AppStore already knows
+  // about, so this is the path that works before any re-registration.
+  const before = wamArgsOf(await call("tutorial.open", {}, solo));
+  assert.equal(before.isNew, true);
+
+  const afterSave = wamArgsOf(
+    await call(
+      "tutorial.open",
+      { input: { arrivalDate: "2026-09-01", isInternational: true } },
+      solo,
+    ),
+  );
+  assert.equal(afterSave.arrivalDate, "2026-09-01");
+  assert.equal(afterSave.isNew, false);
+  ok("the command function accepts and stores progress through its input");
+
+  const reopened = wamArgsOf(await call("tutorial.open", {}, solo));
+  assert.equal(reopened.arrivalDate, "2026-09-01");
+  ok("it survives a fresh request with no input");
+
+  await call(
+    "tutorial.open",
+    { input: { completed: ["course-withdrawal"] } },
+    solo,
+  );
+  const ticked = wamArgsOf(await call("tutorial.open", {}, solo));
+  assert.equal(
+    ticked.items.find((item) => item.id === "course-withdrawal")?.status,
+    "done",
+  );
+  ok("a ticked requirement stays ticked");
+
+  const bad = await call(
+    "tutorial.open",
+    { input: { arrivalDate: "2026-9-1" } },
+    solo,
+  );
+  assert.equal(bad.body.error?.type, "invalidArrivalDate");
+  ok("a malformed date sent this way is still refused");
+}
+
 console.log("\nSaving an arrival date");
 const alice = personIn("ch-e2e", `alice-${Date.now()}`);
 {

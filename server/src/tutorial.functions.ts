@@ -3,6 +3,9 @@ import { z } from "zod";
 import {
   buildChecklist,
   composeSummary,
+  applyProgressUpdate,
+  hasProgressUpdate,
+  ProgressUpdateSchema,
   CHECKLIST_FUNCTIONS,
   CommandActionInputSchema,
   defaultProgress,
@@ -154,7 +157,32 @@ export class TutorialFunctions {
     } satisfies TutorialWamArgs;
 
     const today = todayInSeoul();
-    const { progress, isNew } = await loadProgress(ctx, today);
+    const loaded = await loadProgress(ctx, today);
+    let progress = loaded.progress;
+    let isNew = loaded.isNew;
+
+    // The WAM saves through this same function. `input` is part of the command
+    // contract AppStore already knows, so nothing new has to be registered.
+    const update = ProgressUpdateSchema.safeParse(params.input);
+    if (update.success && hasProgressUpdate(update.data)) {
+      const next = applyProgressUpdate(progress, update.data);
+      if (!next) {
+        throw new FunctionCallError(
+          "The arrival date must be formatted as YYYY-MM-DD",
+          FunctionCallErrorCode.BadRequest,
+          { type: "invalidArrivalDate" },
+        );
+      }
+      if (!(await writeRecord(recordIdFor(ctx), next))) {
+        throw new FunctionCallError(
+          "Progress could not be saved",
+          FunctionCallErrorCode.Internal,
+          { type: "storageUnavailable" },
+        );
+      }
+      progress = next;
+      isNew = false;
+    }
 
     return {
       type: "wam",

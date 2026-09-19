@@ -443,6 +443,46 @@ export const ChecklistWamArgsSchema = z.object({
 
 export type ChecklistWamArgs = z.infer<typeof ChecklistWamArgsSchema>;
 
+/**
+ * Progress sent through the command's existing free-form `input` field. That
+ * field is part of the contract AppStore already knows about, so saving this
+ * way needs no new function and no re-registration.
+ */
+export const ProgressUpdateSchema = z.object({
+  completed: z.array(z.string()).max(50).optional(),
+  arrivalDate: z.string().optional(),
+  isInternational: z.boolean().optional(),
+});
+
+export type ProgressUpdate = z.infer<typeof ProgressUpdateSchema>;
+
+/** True when the caller actually sent something worth persisting. */
+export function hasProgressUpdate(update: ProgressUpdate): boolean {
+  return (
+    update.completed !== undefined ||
+    update.arrivalDate !== undefined ||
+    update.isInternational !== undefined
+  );
+}
+
+/** Folds a partial update onto stored progress, rejecting a malformed date. */
+export function applyProgressUpdate(
+  current: StoredProgress,
+  update: ProgressUpdate,
+): StoredProgress | null {
+  if (update.arrivalDate && parseIsoDate(update.arrivalDate) === null) {
+    return null;
+  }
+  return {
+    arrivalDate: update.arrivalDate ?? current.arrivalDate,
+    semesterStart: current.semesterStart,
+    completed: update.completed
+      ? Array.from(new Set(update.completed))
+      : current.completed,
+    isInternational: update.isInternational ?? current.isInternational,
+  };
+}
+
 export const SaveProgressInputSchema = z.object({
   completed: z.array(z.string()).max(50),
   arrivalDate: z.string().optional(),
