@@ -105,6 +105,35 @@ export class CommandExtension {
             "(ARC), reporting their address, health insurance, tuition " +
             "payment or course withdrawal.",
           enabledByDefault: true,
+          // ALF fills these from what the student typed, so someone who says
+          // "I arrived on 1 September" never has to fill the form in.
+          paramDefinitions: [
+            {
+              name: "arrivalDate",
+              type: "string",
+              required: false,
+              description: "Entry date, YYYY-MM-DD",
+              alfDescription:
+                "The date this student entered Korea, formatted as " +
+                "YYYY-MM-DD. Every immigration deadline is counted from it. " +
+                "Fill it in whenever the student mentions when they arrived, " +
+                "landed, came to Korea or started their stay, including " +
+                "relative phrasing such as 'last month' or 'two weeks ago'. " +
+                "Leave it out if they have not said.",
+            },
+            {
+              name: "isInternational",
+              type: "bool",
+              required: false,
+              description: "International student",
+              alfDescription:
+                "True when the student is an international student, on a " +
+                "student visa, an exchange student, or otherwise not a " +
+                "Korean national. False when they are a domestic Korean " +
+                "student. Immigration requirements are only shown when this " +
+                "is true. Leave it out if it is not clear.",
+            },
+          ],
         },
       ],
     };
