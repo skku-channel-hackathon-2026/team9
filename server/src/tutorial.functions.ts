@@ -88,8 +88,7 @@ export class CommandExtension {
         {
           name: "tutorial",
           scope: "desk",
-          description:
-            "\uc2e0\uc785\uc0dd \uccb4\ud06c\ub9ac\uc2a4\ud2b8: \ubb34\uc5c7\uc744 \uc5b8\uc81c\uae4c\uc9c0 \ud574\uc57c \ud558\ub294\uc9c0",
+          description: "신입생 체크리스트: 무엇을 언제까지 해야 하는지",
           actionFunctionName: TUTORIAL_FUNCTIONS.open,
           alfMode: "recommend",
           alfDescription:
