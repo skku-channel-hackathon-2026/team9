@@ -87,12 +87,14 @@ function Row({
   onToggle,
   onAsk,
   askState,
+  saving,
 }: {
   item: RequirementState
   language: Language
   onToggle: (checked: boolean) => void
   onAsk: () => void
-  askState: 'idle' | 'sent' | 'failed'
+  askState: 'idle' | 'sent' | 'asking' | 'failed'
+  saving: boolean
 }) {
   const count = countdown(item, language)
   const done = item.status === 'done'
@@ -113,6 +115,7 @@ function Row({
             type="checkbox"
             className="cl-tick"
             checked={done}
+            data-saving={saving}
             onChange={(event) => onToggle(event.target.checked)}
             aria-label={item.title}
           />
@@ -159,10 +162,14 @@ function Row({
           <button
             type="button"
             className="cl-ask"
-            disabled={askState === 'sent'}
+            disabled={askState === 'sent' || askState === 'asking'}
             onClick={onAsk}
           >
-            {askState === 'sent' ? t('asked', language) : t('ask', language)}
+            {askState === 'sent'
+              ? t('asked', language)
+              : askState === 'asking'
+                ? t('asking', language)
+                : t('ask', language)}
           </button>
           {!done && (
             <a
@@ -204,7 +211,10 @@ function Checklist() {
   const [expanded, setExpanded] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
   const [posted, setPosted] = useState<'idle' | 'sent' | 'failed'>('idle')
-  const [asked, setAsked] = useState<Record<string, 'sent' | 'failed'>>({})
+  const [asked, setAsked] = useState<
+    Record<string, 'sent' | 'asking' | 'failed'>
+  >({})
+  const [saving, setSaving] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
 
   const { call: saveProgress } = useCallFunction<unknown>({
@@ -277,7 +287,8 @@ function Checklist() {
         ? [...completed, id]
         : completed.filter((each) => each !== id)
       setCompleted(next)
-      void persist({ completed: next })
+      setSaving(id)
+      void persist({ completed: next }).finally(() => setSaving(null))
     },
     [completed, persist]
   )
@@ -288,6 +299,7 @@ function Checklist() {
         setAsked((prev) => ({ ...prev, [id]: 'failed' }))
         return
       }
+      setAsked((prev) => ({ ...prev, [id]: 'asking' }))
       try {
         await saveProgress({
           input: { askAbout: id, targetToken: data.targetToken },
@@ -520,6 +532,7 @@ function Checklist() {
             onToggle={toggle(item.id)}
             onAsk={() => void ask(item.id)()}
             askState={asked[item.id] ?? 'idle'}
+            saving={saving === item.id}
           />
         ))}
       </div>
