@@ -6,20 +6,20 @@ import {
 import { useWamClose } from '@channel.io/app-sdk-wam'
 
 import { isMobile } from './utils/userAgent'
-import Send from './pages/Send'
+import Checklist from './pages/Checklist'
 
 function App() {
   const { close } = useWamClose()
 
   return (
     <WamThemeProvider>
-      <HeightSynchronizer maxHeight={480}>
+      <HeightSynchronizer maxHeight={640}>
         <WamHeader
-          title="Tutorial"
+          title="Freshman Checklist"
           onClose={close}
         />
         <div style={{ padding: isMobile() ? '0 16px 16px' : '0 24px 24px' }}>
-          <Send />
+          <Checklist />
         </div>
       </HeightSynchronizer>
     </WamThemeProvider>

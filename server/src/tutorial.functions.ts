@@ -1,12 +1,25 @@
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import {
+  buildChecklist,
+  composeSummary,
+  applyProgressUpdate,
+  hasProgressUpdate,
+  ProgressUpdateSchema,
+  CHECKLIST_FUNCTIONS,
   CommandActionInputSchema,
+  defaultProgress,
+  parseIsoDate,
+  SaveProgressInputSchema,
+  SaveProgressOutputSchema,
   SendAsBotInputSchema,
+  StoredProgressSchema,
   TUTORIAL_FUNCTIONS,
   TUTORIAL_WAM_NAME,
   type CommandActionInput,
+  type SaveProgressInput,
   type SendAsBotInput,
+  type StoredProgress,
   type TutorialWamArgs,
 } from "@tutorial/shared";
 import {
@@ -30,9 +43,43 @@ import {
   createTutorialTargetToken,
   readTutorialTargetToken,
 } from "./target-token.js";
+import {
+  hasDatabase,
+  progressRecordId,
+  readRecord,
+  writeRecord,
+} from "./records.js";
 
 const tutorialMessage = "This is a test message sent by a manager.";
-const botMessage = "This is a test message sent by a bot.";
+
+/** Deadlines here are counted in Seoul, where the offices actually are. */
+function todayInSeoul(): string {
+  const now = new Date();
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function recordIdFor(ctx: Context): string {
+  return progressRecordId(ctx.channel.id, ctx.caller.type, ctx.caller.id ?? "");
+}
+
+/**
+ * Stored progress, plus whether this person has ever saved anything. Every
+ * deadline is counted from their arrival date, so a first-time reader is asked
+ * for it rather than being shown a list built on a guess.
+ */
+async function loadProgress(
+  ctx: Context,
+  today: string,
+): Promise<{ progress: StoredProgress; isNew: boolean }> {
+  const parsed = StoredProgressSchema.safeParse(
+    await readRecord(recordIdFor(ctx)),
+  );
+  return parsed.success
+    ? { progress: parsed.data, isNew: false }
+    : { progress: defaultProgress(today), isNew: true };
+}
 
 @Extension({ name: "command", systemVersion: "v1" })
 export class CommandExtension {
@@ -46,10 +93,47 @@ export class CommandExtension {
         {
           name: "tutorial",
           scope: "desk",
-          description: "Open the Channel App SDK tutorial WAM",
+          description: "신입생 체크리스트: 무엇을 언제까지 해야 하는지",
           actionFunctionName: TUTORIAL_FUNCTIONS.open,
-          alfMode: "disable",
+          alfMode: "recommend",
+          alfDescription:
+            "Opens a new student's personal checklist of things they must " +
+            "complete after arriving in Korea, with the deadline for each " +
+            "one, the documents to bring and where to go. Recommend this " +
+            "when someone asks what they need to do, what paperwork is " +
+            "required, when something is due, or about alien registration " +
+            "(ARC), reporting their address, health insurance, tuition " +
+            "payment or course withdrawal.",
           enabledByDefault: true,
+          // ALF fills these from what the student typed, so someone who says
+          // "I arrived on 1 September" never has to fill the form in.
+          paramDefinitions: [
+            {
+              name: "arrivalDate",
+              type: "string",
+              required: false,
+              description: "Entry date, YYYY-MM-DD",
+              alfDescription:
+                "The date this student entered Korea, formatted as " +
+                "YYYY-MM-DD. Every immigration deadline is counted from it. " +
+                "Fill it in whenever the student mentions when they arrived, " +
+                "landed, came to Korea or started their stay, including " +
+                "relative phrasing such as 'last month' or 'two weeks ago'. " +
+                "Leave it out if they have not said.",
+            },
+            {
+              name: "isInternational",
+              type: "bool",
+              required: false,
+              description: "International student",
+              alfDescription:
+                "True when the student is an international student, on a " +
+                "student visa, an exchange student, or otherwise not a " +
+                "Korean national. False when they are a domestic Korean " +
+                "student. Immigration requirements are only shown when this " +
+                "is true. Leave it out if it is not clear.",
+            },
+          ],
         },
       ],
     };
@@ -64,13 +148,13 @@ export class TutorialFunctions {
   ) {}
 
   @Func(TUTORIAL_FUNCTIONS.open)
-  @Description("Open the tutorial WAM")
+  @Description("Open the freshman checklist for the current person")
   @InputSchema(CommandActionInputSchema)
   @OutputSchema(CommandResultSchema)
-  open(
+  async open(
     @Ctx() ctx: Context,
     @Input() params: CommandActionInput,
-  ): z.infer<typeof CommandResultSchema> {
+  ): Promise<z.infer<typeof CommandResultSchema>> {
     const chat = params.chat;
     const managerId = ctx.caller.id ?? "";
     const triggerAttributes = params.trigger?.attributes ?? {};
@@ -90,7 +174,7 @@ export class TutorialFunctions {
           )
         : undefined;
 
-    const wamArgs = {
+    const tutorialArgs = {
       chatId: chat?.id ?? "",
       chatType: chat?.type ?? "",
       chatTitle: triggerAttributes.chatTitle ?? "",
@@ -101,18 +185,59 @@ export class TutorialFunctions {
       targetToken,
     } satisfies TutorialWamArgs;
 
+    const today = todayInSeoul();
+    const loaded = await loadProgress(ctx, today);
+    let progress = loaded.progress;
+    let isNew = loaded.isNew;
+
+    // The WAM saves through this same function. `input` is part of the command
+    // contract AppStore already knows, so nothing new has to be registered.
+    const update = ProgressUpdateSchema.safeParse(params.input);
+    if (update.success && hasProgressUpdate(update.data)) {
+      const next = applyProgressUpdate(progress, update.data);
+      if (!next) {
+        throw new FunctionCallError(
+          "The arrival date must be formatted as YYYY-MM-DD",
+          FunctionCallErrorCode.BadRequest,
+          { type: "invalidArrivalDate" },
+        );
+      }
+      if (!(await writeRecord(recordIdFor(ctx), next))) {
+        throw new FunctionCallError(
+          "Progress could not be saved",
+          FunctionCallErrorCode.Internal,
+          { type: "storageUnavailable" },
+        );
+      }
+      progress = next;
+      isNew = false;
+    }
+
     return {
       type: "wam",
       attributes: {
         appId,
         name: TUTORIAL_WAM_NAME,
-        wamArgs,
+        wamArgs: {
+          ...tutorialArgs,
+          items: buildChecklist({
+            ...progress,
+            today,
+            profile: { isInternational: progress.isInternational },
+          }),
+          arrivalDate: progress.arrivalDate,
+          isInternational: progress.isInternational,
+          semesterStart: progress.semesterStart,
+          today,
+          isNew,
+          canSave: hasDatabase(),
+        },
       },
     };
   }
 
   @Func(TUTORIAL_FUNCTIONS.sendAsBot)
-  @Description("Send a team chat message with the app bot profile")
+  @Description("Post this person's checklist into the chat as the app bot")
   @InputSchema(SendAsBotInputSchema)
   @OutputSchema(z.object({}))
   async sendAsBot(
@@ -134,6 +259,17 @@ export class TutorialFunctions {
       );
     }
 
+    const today = todayInSeoul();
+    const { progress } = await loadProgress(ctx, today);
+    const summary = composeSummary(
+      buildChecklist({
+        ...progress,
+        today,
+        profile: { isInternational: progress.isInternational },
+      }),
+      today,
+    );
+
     const token = await this.tokenManager.getChannelToken({
       channelId: ctx.channel.id,
     });
@@ -146,8 +282,8 @@ export class TutorialFunctions {
         rootMessageId: input.rootMessageId,
         broadcast: input.broadcast,
         dto: {
-          plainText: botMessage,
-          botName: "AppTutorialBot",
+          plainText: summary,
+          botName: "Freshman Checklist",
         },
       });
     } catch {
@@ -159,5 +295,40 @@ export class TutorialFunctions {
     }
 
     return {};
+  }
+
+  @Func(CHECKLIST_FUNCTIONS.saveProgress)
+  @Description("Record which requirements this person has completed")
+  @InputSchema(SaveProgressInputSchema)
+  @OutputSchema(SaveProgressOutputSchema)
+  async saveProgress(
+    @Ctx() ctx: Context,
+    @Input() input: SaveProgressInput,
+  ): Promise<z.infer<typeof SaveProgressOutputSchema>> {
+    if (input.arrivalDate && parseIsoDate(input.arrivalDate) === null) {
+      throw new FunctionCallError(
+        "The arrival date must be formatted as YYYY-MM-DD",
+        FunctionCallErrorCode.BadRequest,
+        { type: "invalidArrivalDate" },
+      );
+    }
+
+    const { progress: current } = await loadProgress(ctx, todayInSeoul());
+    const next: StoredProgress = {
+      arrivalDate: input.arrivalDate ?? current.arrivalDate,
+      semesterStart: current.semesterStart,
+      completed: Array.from(new Set(input.completed)),
+      isInternational: input.isInternational ?? current.isInternational,
+    };
+
+    if (!(await writeRecord(recordIdFor(ctx), next))) {
+      throw new FunctionCallError(
+        "Progress could not be saved",
+        FunctionCallErrorCode.Internal,
+        { type: "storageUnavailable" },
+      );
+    }
+
+    return { saved: true, completed: next.completed };
   }
 }
