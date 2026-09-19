@@ -35,7 +35,7 @@ export function installDevPreview(): void {
       ...defaultProgress(today),
       completed,
       today,
-      profile: { isInternational: true, living: 'dorm' },
+      profile: { isInternational: true, living: 'dorm', university: 'skku' },
     }),
     arrivalDate: defaultProgress(today).arrivalDate,
     semesterStart: defaultProgress(today).semesterStart,
@@ -43,6 +43,8 @@ export function installDevPreview(): void {
     isNew: new URLSearchParams(window.location.search).has('new'),
     isInternational: true,
     living: 'dorm',
+    university: 'skku',
+    name: 'Alex',
     canSave: true,
   })
 

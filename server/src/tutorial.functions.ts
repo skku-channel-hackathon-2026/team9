@@ -307,13 +307,16 @@ export class TutorialFunctions {
             profile: {
               isInternational: progress.isInternational,
               living: progress.living,
+              university: progress.university,
             },
           }),
           arrivalDate: progress.arrivalDate,
           isInternational: progress.isInternational,
           living: progress.living,
+          university: progress.university,
           semesterStart: progress.semesterStart,
           today,
+          name: await this.readManagerName(ctx),
           isNew,
           canSave: hasDatabase(),
         },
@@ -353,6 +356,7 @@ export class TutorialFunctions {
         profile: {
           isInternational: progress.isInternational,
           living: progress.living,
+          university: progress.university,
         },
       }),
       today,
@@ -385,6 +389,28 @@ export class TutorialFunctions {
     return {};
   }
 
+  /**
+   * The reader's own name, so the panel can greet them. Channel does not
+   * promise this field, and a missing name is not worth failing a request
+   * over, so anything unexpected simply means no greeting.
+   */
+  private async readManagerName(ctx: Context): Promise<string | undefined> {
+    const managerId = ctx.caller.id;
+    if (ctx.caller.type !== "manager" || !managerId) return undefined;
+    try {
+      const token = await this.tokenManager.getChannelToken({
+        channelId: ctx.channel.id,
+      });
+      const result = await this.nativeClient
+        .createProxyApi(token.accessToken)
+        .getManager({ channelId: ctx.channel.id, managerId });
+      const name = result?.manager?.name;
+      return typeof name === "string" && name.length > 0 ? name : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Posts one requirement into the chat as a question, as the app bot. */
   private async askInChat(
     ctx: Context,
@@ -410,6 +436,7 @@ export class TutorialFunctions {
     const profile = {
       isInternational: progress.isInternational,
       living: progress.living,
+      university: progress.university,
     };
     const item = buildChecklist({ ...progress, today, profile }).find(
       (candidate) => candidate.id === ask.askAbout,
@@ -468,6 +495,7 @@ export class TutorialFunctions {
       completed: Array.from(new Set(input.completed)),
       isInternational: input.isInternational ?? current.isInternational,
       living: current.living,
+      university: current.university,
     };
 
     if (!(await writeRecord(recordIdFor(ctx), next))) {
