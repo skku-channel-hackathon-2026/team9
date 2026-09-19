@@ -62,8 +62,8 @@
  * a tall panel and clipped a short one.
  */
 .skku-list {
-  max-height: calc(100vh - 248px);
-  min-height: 200px;
+  max-height: calc(100vh - 300px);
+  min-height: 140px;
   padding-bottom: 56px;
   overflow-y: auto;
   overscroll-behavior: contain;

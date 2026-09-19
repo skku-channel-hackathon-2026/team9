@@ -442,7 +442,10 @@ function Checklist() {
   })
 
   useEffect(() => {
-    setSize({ width: 520, height: 800 })
+    // Desk anchors the panel partway down the chat column, so the room below
+    // it is far less than the window height. Asking for 800 pushed the last
+    // rows off the bottom of the screen where nothing could reach them.
+    setSize({ width: 520, height: 600 })
   }, [setSize])
 
   // A timeline opens at now. Sorted by date, the first row is the oldest miss,
@@ -476,9 +479,9 @@ function Checklist() {
       setAsking(data.isNew)
       // Every row now carries its date and the list is never truncated, so
       // the dated view and the brief are the same screen. Nothing to switch.
-      // The most urgent row opens itself, so the panel is never all headings.
-      const firstOpen = data.items.find((item) => item.status !== 'done')
-      setOpenRows(firstOpen ? [firstOpen.id] : [])
+      // Nothing opens itself. One open row is 300px of a 600px panel, which
+      // buys one requirement at the cost of seeing the rest of them.
+      setOpenRows([])
       setHydrated(true)
     }
   }, [data, hydrated])

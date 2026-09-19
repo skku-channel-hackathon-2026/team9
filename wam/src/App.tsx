@@ -18,7 +18,7 @@ function App() {
 
   return (
     <WamThemeProvider>
-      <HeightSynchronizer maxHeight={860}>
+      <HeightSynchronizer maxHeight={600}>
         <WamHeader
           title={title}
           onClose={close}
