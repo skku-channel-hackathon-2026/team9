@@ -11,6 +11,11 @@ import { useCallFunction, useWamSize } from '@channel.io/app-sdk-wam'
 import {
   buildChecklist,
   calendarUrl,
+  composeGuideAnswer,
+  findGuide,
+  HELP,
+  sourcesFor,
+  suggestedQuestions,
   languageFor,
   pick,
   UNIVERSITIES,
@@ -538,26 +543,84 @@ function Checklist() {
   )
 
   /**
-   * The server answers against this person's stored progress rather than
-   * anything the panel sends, so only the question, the row it came from and
-   * the permission to post into the chat travel with it.
+   * Answer here, and relay in the background.
+   *
+   * The panel used to read the answer out of the return value of
+   * `tutorial.open`. That function returns a `type: "wam"` result, which tells
+   * Desk to render a WAM rather than to hand data back to the caller, so in
+   * Desk the answer never arrived and every question ended in "could not send
+   * that one". Saving never noticed because it ignores what comes back.
+   *
+   * The guides are in the shared package the panel already imports, so the
+   * answer is composed right here: instant, and it cannot fail. The server
+   * call still goes out, because that is what puts the question into the chat
+   * for ALF with this student's dates attached — but it is now a relay whose
+   * failure costs the student nothing.
    */
   const askQuestion = useCallback(
     async (input: { question: string; about?: string }) => {
-      const result = await askAssistant({
-        input: {
-          question: input.question,
-          about: input.about,
-          targetToken: data?.targetToken,
-        },
-      })
-      const answer = result?.attributes?.wamArgs?.assistantAnswer
-      if (!answer) {
-        throw new Error('The question could not be answered.')
+      const item = input.about
+        ? (data?.items.find((candidate) => candidate.id === input.about) ??
+          null)
+        : null
+      const guide = findGuide(
+        item
+          ? `${input.question} ${item.title} ${item.officialKo}`
+          : input.question
+      )
+
+      let askedInChat = false
+      if (data?.targetToken) {
+        try {
+          await askAssistant({
+            input: {
+              question: input.question,
+              about: input.about,
+              targetToken: data.targetToken,
+            },
+          })
+          askedInChat = true
+        } catch {
+          askedInChat = false
+        }
       }
-      return answer
+
+      const sources = sourcesFor(guide, item, language)
+      const followUps = suggestedQuestions(language, item)
+
+      if (guide) {
+        return {
+          answer: composeGuideAnswer(guide, language),
+          origin: 'guide' as const,
+          sources,
+          followUps,
+          askedInChat,
+        }
+      }
+
+      return {
+        answer: [
+          language === 'ko'
+            ? '이 질문에 대한 안내 자료가 아직 없습니다.'
+            : 'I do not have written guidance for that one.',
+          askedInChat
+            ? language === 'ko'
+              ? '대화창에 질문을 남겼으니 ALF 또는 담당자가 답변할 것입니다.'
+              : 'Your question is now in the chat, where ALF or a member of staff can answer it.'
+            : '',
+          language === 'ko'
+            ? `출입국 관련은 ${HELP.immigrationPhone} (외국인종합안내센터), 학사 관련은 국제처에 문의하세요.`
+            : `For immigration call ${HELP.immigrationPhone}; for university matters ask your international office.`,
+        ]
+          .filter(Boolean)
+          .join(' '),
+        origin: 'unavailable' as const,
+        sources,
+        followUps,
+        askedInChat,
+      }
     },
-    [askAssistant, data]
+    [askAssistant, data, language]
   )
 
   const confirm = useCallback(() => {
