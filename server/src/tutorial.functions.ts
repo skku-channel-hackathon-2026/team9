@@ -149,6 +149,65 @@ export class CommandExtension {
             },
           ],
         },
+        // The same checklist on the customer-facing surface, which is
+        // where a student and ALF actually meet. Both become active on
+        // one registration; neither changes behaviour until then.
+        {
+          name: "checklist",
+          scope: "front",
+          description: "신입생 체크리스트: 무엇을 언제까지 해야 하는지",
+          actionFunctionName: TUTORIAL_FUNCTIONS.open,
+          alfMode: "recommend",
+          alfDescription:
+            "Opens a new student's personal checklist of things they must " +
+            "complete after arriving in Korea, with the deadline for each " +
+            "one, the documents to bring and where to go. Recommend this " +
+            "when someone asks what they need to do, what paperwork is " +
+            "required, when something is due, or about alien registration " +
+            "(ARC), reporting their address, health insurance, tuition " +
+            "payment or course withdrawal.",
+          enabledByDefault: true,
+          // ALF fills these from what the student typed, so someone who says
+          // "I arrived on 1 September" never has to fill the form in.
+          paramDefinitions: [
+            {
+              name: "arrivalDate",
+              type: "string",
+              required: false,
+              description: "Entry date, YYYY-MM-DD",
+              alfDescription:
+                "The date this student entered Korea, formatted as " +
+                "YYYY-MM-DD. Every immigration deadline is counted from it. " +
+                "Fill it in whenever the student mentions when they arrived, " +
+                "landed, came to Korea or started their stay, including " +
+                "relative phrasing such as 'last month' or 'two weeks ago'. " +
+                "Leave it out if they have not said.",
+            },
+            {
+              name: "living",
+              type: "string",
+              required: false,
+              description: "dorm or commuter",
+              alfDescription:
+                'Where the student lives: "dorm" if they live in ' +
+                'university dormitory housing, "commuter" if they travel ' +
+                "in from outside. Requirements that only exist for one of " +
+                "these are hidden from the other. Leave it out if unclear.",
+            },
+            {
+              name: "isInternational",
+              type: "bool",
+              required: false,
+              description: "International student",
+              alfDescription:
+                "True when the student is an international student, on a " +
+                "student visa, an exchange student, or otherwise not a " +
+                "Korean national. False when they are a domestic Korean " +
+                "student. Immigration requirements are only shown when this " +
+                "is true. Leave it out if it is not clear.",
+            },
+          ],
+        },
       ],
     };
   }
