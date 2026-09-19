@@ -643,10 +643,18 @@ export function composeAlfQuestion(input: {
       ? `내 상황 (${input.today} 기준)`
       : `My situation (as of ${input.today})`,
   );
+  const semester = ko
+    ? { first: "1학기", second: "2학기", later: "3학기 이상" }[profile.semester]
+    : {
+        first: "first semester",
+        second: "second semester",
+        later: "later in the degree",
+      }[profile.semester];
+
   lines.push(
     ko
-      ? `• ${profile.isInternational ? "외국인 유학생" : "국내 학생"} · ${profile.living === "dorm" ? "기숙사" : "통학"}`
-      : `• ${profile.isInternational ? "International student" : "Domestic student"} · ${profile.living === "dorm" ? "dormitory" : "commuting"}`,
+      ? `• ${profile.isInternational ? "외국인 유학생" : "국내 학생"} · ${profile.living === "dorm" ? "기숙사" : "통학"} · ${semester}`
+      : `• ${profile.isInternational ? "International student" : "Domestic student"} · ${profile.living === "dorm" ? "dormitory" : "commuting"} · ${semester}`,
   );
 
   const timing = (state: RequirementState): string =>

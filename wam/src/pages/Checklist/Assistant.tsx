@@ -5,8 +5,28 @@ import {
   type Language,
   type RequirementState,
 } from '@tutorial/shared'
+import {
+  Box,
+  Button,
+  Divider,
+  HStack,
+  Text,
+  VStack,
+} from '@channel.io/bezier-react/beta'
+import { InlineBanner } from '@channel.io/app-sdk-wam-ui'
 
+import './brand.css'
 import { t } from './strings'
+
+const INPUT_STYLE = {
+  width: '100%',
+  padding: '9px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--bezier-color-border-neutral)',
+  background: 'transparent',
+  color: 'inherit',
+  font: 'inherit',
+}
 
 interface Entry {
   role: 'student' | 'assistant'
@@ -23,11 +43,10 @@ interface Entry {
  * the rule raises — "do I extend my visa before or after this?", "what if I am
  * missing the transcript?" — and does two things with it: shows the written
  * guidance straight away, and puts the same question into the chat with this
- * student's dates attached, where ALF answers it properly.
+ * student's dates attached, where ALF answers it.
  *
- * It is a separate view rather than a drawer under the list: at 420px wide a
- * thread and a ledger cannot share the screen without one of them becoming
- * unreadable.
+ * It takes over the panel rather than sitting under the list: a thread and a
+ * ledger in one column means neither is readable.
  */
 function Assistant({
   language,
@@ -92,7 +111,7 @@ function Assistant({
         // The answer is long and the newest turn is the one being read.
         window.requestAnimationFrame(() => {
           const thread = threadRef.current
-          if (thread) thread.scrollTop = thread.scrollHeight
+          if (thread) thread.scrollIntoView({ block: 'end' })
         })
       }
     },
@@ -100,61 +119,118 @@ function Assistant({
   )
 
   return (
-    <div className="cl cl-chat">
-      <div className="cl-head">
-        <div className="cl-title">
+    <VStack
+      className="skku"
+      spacing={12}
+    >
+      <VStack spacing={4}>
+        <Text
+          typo="18"
+          bold
+          color="text-neutral"
+        >
           {item ? item.title : t('assistantTitle', language)}
-        </div>
-        <div className="cl-sub">
+        </Text>
+        <Text
+          typo="12"
+          color="text-neutral-lighter"
+        >
           {item
             ? `${item.officialKo} · ${t('assistantLead', language)}`
             : t('assistantLead', language)}
-        </div>
-      </div>
+        </Text>
+      </VStack>
 
-      <div
-        className="cl-thread"
+      <VStack
+        spacing={10}
         ref={threadRef}
       >
         {entries.length === 0 && (
-          <div className="cl-note">{t('assistantEmpty', language)}</div>
+          <Text
+            typo="13"
+            color="text-neutral-lighter"
+          >
+            {t('assistantEmpty', language)}
+          </Text>
         )}
 
-        {entries.map((entry, index) => (
-          <div
-            className="cl-turn"
-            data-role={entry.role}
-            key={`${entry.role}-${index}`}
-          >
-            <div className="cl-turn-who">
-              {entry.role === 'student'
-                ? t('you', language)
-                : t('assistantName', language)}
-            </div>
-            <div className="cl-turn-text">{entry.text}</div>
-            {entry.role === 'assistant' && (
-              <>
+        {entries.map((entry, index) =>
+          entry.role === 'student' ? (
+            <VStack
+              key={`you-${index}`}
+              spacing={2}
+            >
+              <Text
+                typo="11"
+                bold
+                color="text-accent-blue"
+              >
+                {t('you', language)}
+              </Text>
+              <Text
+                typo="13"
+                color="text-neutral"
+              >
+                {entry.text}
+              </Text>
+            </VStack>
+          ) : (
+            <Box
+              key={`answer-${index}`}
+              padding={12}
+              borderRadius="8"
+              borderWidth={1}
+              borderColor="border-neutral"
+            >
+              <VStack spacing={6}>
+                <Text
+                  typo="11"
+                  bold
+                  color="text-neutral-lighter"
+                >
+                  {t('assistantName', language)}
+                </Text>
+                {/* The steps are carried by the line breaks, so keep them. */}
+                <div style={{ whiteSpace: 'pre-wrap' }}>
+                  <Text
+                    typo="13"
+                    color="text-neutral"
+                  >
+                    {entry.text}
+                  </Text>
+                </div>
                 {entry.sources && entry.sources.length > 0 && (
-                  <div className="cl-actions">
+                  <HStack
+                    align="center"
+                    spacing={8}
+                  >
                     {entry.sources.map((source) => (
                       <a
-                        className="cl-link"
                         key={source.url}
                         href={source.url}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {source.label}
+                        <Text
+                          as="span"
+                          typo="12"
+                          color="text-accent-blue"
+                        >
+                          {source.label}
+                        </Text>
                       </a>
                     ))}
-                  </div>
+                  </HStack>
                 )}
                 {/*
                  * Where the words came from, and whether ALF has the question
-                 * too. An answer with no provenance is the thing a student
+                 * too. An answer with no provenance is the one a student
                  * cannot check, and checking is the whole point here.
                  */}
-                <div className="cl-note">
+                <Text
+                  typo="12"
+                  color="text-neutral-lighter"
+                >
                   {[
                     entry.origin === 'guide' ? t('originGuide', language) : '',
                     t(
@@ -164,66 +240,88 @@ function Assistant({
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-
-        {pending && <div className="cl-note">{t('thinking', language)}</div>}
-        {failed && (
-          <div className="cl-penalty">{t('assistantFailed', language)}</div>
+                </Text>
+              </VStack>
+            </Box>
+          )
         )}
-      </div>
 
-      <div className="cl-foot">
+        {pending && (
+          <Text
+            typo="12"
+            color="text-neutral-lighter"
+          >
+            {t('thinking', language)}
+          </Text>
+        )}
+        {failed && (
+          <InlineBanner
+            variant="error"
+            content={t('assistantFailed', language)}
+          />
+        )}
+      </VStack>
+
+      <Divider withoutSideIndent />
+
+      <VStack spacing={8}>
         {!pending && suggestions.length > 0 && (
-          <div className="cl-filters">
+          <VStack spacing={4}>
             {suggestions.slice(0, 3).map((suggestion) => (
-              <button
-                type="button"
-                className="cl-chip"
+              <Button
                 key={suggestion}
+                variant="outlined"
+                semantic="secondary"
+                size="xs"
+                label={suggestion}
                 onClick={() => void send(suggestion)}
-              >
-                {suggestion}
-              </button>
+              />
             ))}
-          </div>
+          </VStack>
         )}
 
         <form
-          className="cl-compose"
           onSubmit={(event) => {
             event.preventDefault()
             void send(question)
           }}
         >
-          <input
-            className="cl-input"
-            value={question}
-            placeholder={t('assistantPlaceholder', language)}
-            onChange={(event) => setQuestion(event.target.value)}
-            aria-label={t('assistantTitle', language)}
-          />
-          <button
-            type="submit"
-            className="cl-send"
-            disabled={pending || question.trim().length === 0}
+          <HStack
+            align="center"
+            spacing={6}
           >
-            {t('send', language)}
-          </button>
+            <Box grow={1}>
+              <input
+                value={question}
+                placeholder={t('assistantPlaceholder', language)}
+                onChange={(event) => setQuestion(event.target.value)}
+                aria-label={t('assistantTitle', language)}
+                style={INPUT_STYLE}
+              />
+            </Box>
+            <Box shrink={0}>
+              <Button
+                type="submit"
+                variant="filled"
+                semantic="primary"
+                size="s"
+                label={t('send', language)}
+                loading={pending}
+                disabled={question.trim().length === 0}
+              />
+            </Box>
+          </HStack>
         </form>
 
-        <button
-          type="button"
-          className="cl-quiet"
+        <Button
+          variant="ghost"
+          semantic="secondary"
+          size="xs"
+          label={t('backToList', language)}
           onClick={onBack}
-        >
-          {t('backToList', language)}
-        </button>
-      </div>
-    </div>
+        />
+      </VStack>
+    </VStack>
   )
 }
 

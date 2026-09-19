@@ -15,6 +15,7 @@ const PROFILE: StudentProfile = {
   isInternational: true,
   living: "dorm",
   university: "skku",
+  semester: "first",
 };
 
 const TODAY = "2026-09-19";
@@ -80,6 +81,7 @@ test("the question posted for ALF carries this student's own dates", () => {
   assert.ok(message.includes(arc.officialKo));
   assert.ok(message.includes(`${arc.daysLeft} days left`));
   assert.ok(message.includes("체류기간 연장허가"));
+  assert.ok(message.includes("first semester"));
   assert.ok(message.includes(TODAY));
   assert.ok(message.includes("https://"));
 });
@@ -142,6 +144,7 @@ test("a domestic student's question is composed in Korean", () => {
   });
   assert.ok(message.includes("내 상황"));
   assert.ok(message.includes("국내 학생"));
+  assert.ok(message.includes("1학기"));
 });
 
 test("always offers somewhere to read for yourself", () => {

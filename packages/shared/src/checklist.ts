@@ -58,6 +58,9 @@ export function universityById(id: string): University {
   return UNIVERSITIES.find((u) => u.id === id) ?? UNIVERSITIES[0]!;
 }
 
+/** How far into their degree the student is. */
+export type Semester = "first" | "second" | "later";
+
 /** Where the student lives, when that changes whether a rule applies. */
 export type RequirementLiving = "any" | "dorm" | "commuter";
 
@@ -105,6 +108,8 @@ export interface Requirement {
   national: boolean;
   audience: RequirementAudience;
   living: RequirementLiving;
+  /** Only happens once, when you first arrive — not every semester. */
+  firstTimeOnly?: boolean;
   /**
    * What to do once this has already been missed. Telling a student they are
    * late without telling them how to fix it is worse than saying nothing.
@@ -231,6 +236,7 @@ export const REQUIREMENTS: Requirement[] = [
   },
   {
     id: "enrolment-certificate",
+    firstTimeOnly: true,
     title: {
       en: "Get your certificate of enrolment",
       ko: "재학증명서 발급",
@@ -495,6 +501,7 @@ export const REQUIREMENTS: Requirement[] = [
   // --- SKKU dormitory, 2026 Fall (dorm.skku.edu notices) ---
   {
     id: "dorm-orientation",
+    firstTimeOnly: true,
     title: {
       en: "Complete the dormitory orientation and fire-safety course",
       ko: "기숙사 온라인 오리엔테이션·소방안전교육 이수",
@@ -529,6 +536,7 @@ export const REQUIREMENTS: Requirement[] = [
   },
   {
     id: "dorm-application",
+    firstTimeOnly: true,
     title: {
       en: "Apply for a dormitory room",
       ko: "기숙사 입사 신청",
@@ -576,6 +584,7 @@ export const REQUIREMENTS: Requirement[] = [
   },
   {
     id: "dorm-tb-certificate",
+    firstTimeOnly: true,
     title: {
       en: "Submit your tuberculosis test result",
       ko: "결핵검진결과서 제출",
@@ -773,6 +782,7 @@ export const REQUIREMENTS: Requirement[] = [
   },
   {
     id: "student-id-card",
+    firstTimeOnly: true,
     title: {
       en: "Get your student card issued",
       ko: "다기능학생증 발급 신청",
@@ -904,12 +914,15 @@ export interface StudentProfile {
   living: "dorm" | "commuter";
   /** Which university's own calendar to apply, if this build has it. */
   university: string;
+  /** Things you only do once, at the start, drop away after that. */
+  semester: Semester;
 }
 
 export const StudentProfileSchema = z.object({
   isInternational: z.boolean(),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
   university: z.string().default("skku"),
+  semester: z.enum(["first", "second", "later"]).default("first"),
 });
 
 /**
@@ -924,6 +937,11 @@ export function appliesTo(
   requirement: Requirement,
   profile: StudentProfile,
 ): boolean {
+  // Getting a student card or applying for a room is a first-arrival task.
+  // Showing it to someone in their third semester is noise.
+  if (requirement.firstTimeOnly && profile.semester !== "first") {
+    return false;
+  }
   // A university's own deadlines are only correct for that university.
   // National rules hold everywhere, so they are always shown.
   if (
@@ -1031,6 +1049,7 @@ export const StoredProgressSchema = z.object({
   isInternational: z.boolean().default(true),
   living: z.enum(["dorm", "commuter"]).default("dorm"),
   university: z.string().default("skku"),
+  semester: z.enum(["first", "second", "later"]).default("first"),
 });
 
 export type StoredProgress = z.infer<typeof StoredProgressSchema>;
@@ -1064,6 +1083,7 @@ export const ChecklistWamArgsSchema = z.object({
   isInternational: z.boolean(),
   living: z.enum(["dorm", "commuter"]),
   university: z.string(),
+  semester: z.enum(["first", "second", "later"]),
   /** The reader's name, when Channel gives us one. */
   name: z.string().optional(),
   /** Short-lived signed permission to post into the chat it was opened from. */
@@ -1093,6 +1113,7 @@ export const ProgressUpdateSchema = z.object({
   isInternational: z.boolean().optional(),
   living: z.enum(["dorm", "commuter"]).optional(),
   university: z.string().max(32).optional(),
+  semester: z.enum(["first", "second", "later"]).optional(),
 });
 
 export type ProgressUpdate = z.infer<typeof ProgressUpdateSchema>;
@@ -1104,7 +1125,8 @@ export function hasProgressUpdate(update: ProgressUpdate): boolean {
     update.arrivalDate !== undefined ||
     update.isInternational !== undefined ||
     update.living !== undefined ||
-    update.university !== undefined
+    update.university !== undefined ||
+    update.semester !== undefined
   );
 }
 
@@ -1125,6 +1147,7 @@ export function applyProgressUpdate(
     isInternational: update.isInternational ?? current.isInternational,
     living: update.living ?? current.living,
     university: update.university ?? current.university,
+    semester: update.semester ?? current.semester,
   };
 }
 
@@ -1166,6 +1189,7 @@ export function defaultProgress(today: string): StoredProgress {
     isInternational: true,
     living: "dorm",
     university: "skku",
+    semester: "first",
   };
 }
 

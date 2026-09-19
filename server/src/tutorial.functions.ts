@@ -364,12 +364,14 @@ export class TutorialFunctions {
               isInternational: progress.isInternational,
               living: progress.living,
               university: progress.university,
+              semester: progress.semester,
             },
           }),
           arrivalDate: progress.arrivalDate,
           isInternational: progress.isInternational,
           living: progress.living,
           university: progress.university,
+          semester: progress.semester,
           semesterStart: progress.semesterStart,
           today,
           name: await this.readManagerName(ctx),
@@ -414,6 +416,7 @@ export class TutorialFunctions {
           isInternational: progress.isInternational,
           living: progress.living,
           university: progress.university,
+          semester: progress.semester,
         },
       }),
       today,
@@ -494,6 +497,7 @@ export class TutorialFunctions {
       isInternational: progress.isInternational,
       living: progress.living,
       university: progress.university,
+      semester: progress.semester,
     };
     const item = buildChecklist({ ...progress, today, profile }).find(
       (candidate) => candidate.id === ask.askAbout,
@@ -598,6 +602,7 @@ export class TutorialFunctions {
       isInternational: progress.isInternational,
       living: progress.living,
       university: progress.university,
+      semester: progress.semester,
     };
     const language = languageFor(profile);
     const items = buildChecklist({ ...progress, today, profile });
@@ -696,6 +701,7 @@ export class TutorialFunctions {
       isInternational: input.isInternational ?? current.isInternational,
       living: current.living,
       university: current.university,
+      semester: current.semester,
     };
 
     if (!(await writeRecord(recordIdFor(ctx), next))) {
